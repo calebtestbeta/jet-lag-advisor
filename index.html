@@ -68,7 +68,7 @@
       -webkit-backdrop-filter: blur(var(--lg-blur-md)) saturate(160%) brightness(1.02);
       border: 1px solid var(--lg-border-side);
       box-shadow: 0 8px 32px var(--lg-shadow);
-      transition: transform var(--lg-duration-base) ease-in-out, box-shadow var(--lg-duration-base) ease-in-out;
+      transition: transform var(--lg-duration-base) ease-in-out, box-shadow var(--lg-duration-base) ease-in-out, background 0.8s ease, border-color 0.8s ease;
     }
     /* 明確主題背景：架構修正後 media query 不再污染 :root，!important 僅保留必要處 */
     .theme-light .lg-glass {
@@ -350,7 +350,7 @@
     </filter>
   </defs>
 </svg>
-<div id="app" :class="['min-h-screen transition-all duration-1000', bgClass, isDark ? 'theme-dark text-white' : 'theme-light text-slate-800']">
+<div id="app" :class="['min-h-screen', bgClass, isDark ? 'theme-dark text-white' : 'theme-light text-slate-800']" style="transition: background 1s ease, color 1s ease;">
 
   <!-- Update banner -->
   <div v-if="showUpdateBanner" class="fixed top-0 left-0 right-0 z-50 safe-top">
