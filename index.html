@@ -370,7 +370,7 @@
     </div>
 
     <!-- Header -->
-    <div class="flex items-center justify-between py-4">
+    <div class="flex items-center justify-between py-3 px-1 rounded-3xl lg-glass mb-4">
       <div>
         <h1 :class="['text-xl font-bold tracking-tight', isDark ? 'text-white' : 'text-slate-800']">時差調整助手</h1>
         <p :class="['text-xs mt-0.5', isDark ? 'text-white/75' : 'text-slate-600']">基於醫學研究的時差建議</p>
@@ -607,7 +607,7 @@
     </div>
 
     <!-- Disclaimer -->
-    <div v-if="destTz" :class="['rounded-2xl p-3 mb-4 text-xs', isDark ? 'bg-white/5 text-white/40' : 'bg-slate-100/80 text-slate-400']">
+    <div v-if="destTz" :class="['rounded-2xl p-3 mb-4 text-xs', isDark ? 'bg-white/5 text-white/55' : 'bg-slate-100/80 text-slate-500']">
       <p>本建議基於一般健康成人的時差醫學研究，不構成醫療建議。特殊健康狀況（癲癇、躁鬱症、糖尿病）或使用特定藥物者，服用褪黑激素前請諮詢醫師。</p>
     </div>
 
