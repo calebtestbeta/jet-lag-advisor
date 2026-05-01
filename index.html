@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW" style="color-scheme: only light;">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -14,7 +14,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-    :root { color-scheme: only light; }
+    :root { color-scheme: light; }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
@@ -35,6 +35,7 @@
     /* Light mode tokens — `:root` 設 light 預設值，.theme-dark 覆蓋深色，不依賴 media query */
     :root,
     .theme-light {
+      color-scheme: only light;
       --lg-surface: rgba(255,255,255,0.78);
       --lg-surface-thin: rgba(255,255,255,0.55);
       --lg-surface-thick: rgba(255,255,255,0.95);
@@ -48,6 +49,7 @@
     }
     /* Dark mode tokens — 唯一深色 token 來源，由 .theme-dark class 控制 */
     .theme-dark {
+      color-scheme: dark;
       --lg-surface: rgba(30,30,40,0.60);
       --lg-surface-thin: rgba(20,20,30,0.45);
       --lg-surface-thick: rgba(20,20,32,0.88);
@@ -64,13 +66,12 @@
     .lg-glass {
       position: relative;
       background: var(--lg-surface);
-      backdrop-filter: blur(var(--lg-blur-md)) saturate(160%) brightness(1.02);
-      -webkit-backdrop-filter: blur(var(--lg-blur-md)) saturate(160%) brightness(1.02);
       border: 1px solid var(--lg-border-side);
       box-shadow: 0 8px 32px var(--lg-shadow);
       transition: transform var(--lg-duration-base) ease-in-out, box-shadow var(--lg-duration-base) ease-in-out, background 0.8s ease, border-color 0.8s ease;
     }
-    /* 明確主題背景：架構修正後 media query 不再污染 :root，!important 僅保留必要處 */
+    /* backdrop-filter 只在淺色模式設定：深色模式完全不設（包括不設 none），
+       避免 Safari 建立 GPU compositing layer 快取舊的淡色背景 */
     .theme-light .lg-glass {
       background: rgba(255,255,255,0.90);
       border-color: rgba(0,0,0,0.07);
@@ -78,8 +79,10 @@
       -webkit-backdrop-filter: blur(16px);
     }
     .theme-dark .lg-glass {
-      background: rgba(30,30,40,0.72);
+      background: rgba(30,30,40,0.85);
       border-color: rgba(255,255,255,0.12);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
     .lg-glass::before {
       content: '';
@@ -1292,11 +1295,10 @@ createApp({
 
     const resetTrip = () => {
       clearTrip();
-      originTz.value = '';
       destTz.value = '';
-      originSearch.value = '';
       destSearch.value = '';
       localStorage.removeItem('jl_settings');
+      detectOriginTz();
     };
 
     const confirmArrival = () => {
@@ -1539,16 +1541,18 @@ createApp({
     ];
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
-    onMounted(() => {
-      // Detect timezone
+    const detectOriginTz = () => {
       const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      loadData();
-      if (!originTz.value && detected) {
+      if (detected) {
         originTz.value = detected;
         const c = CITIES.find(x => x.tz === detected);
-        if (c) originSearch.value = `${c.zh} · ${c.en}`;
-        else originSearch.value = detected;
+        originSearch.value = c ? `${c.zh} · ${c.en}` : detected;
       }
+    };
+
+    onMounted(() => {
+      loadData();
+      if (!originTz.value) detectOriginTz();
 
       // Start ticker
       ticker = setInterval(() => {
