@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" style="color-scheme: only light;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -14,7 +14,14 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif; overscroll-behavior: none; }
+    :root { color-scheme: only light; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      overscroll-behavior: none;
+      background: #f0f6ff;
+    }
+    @media (prefers-color-scheme: dark) { body { background: #0f172a; } }
 
     /* ── Liquid Glass Design Tokens ─────────────────────────────────────────── */
     :root {
@@ -25,20 +32,21 @@
       --lg-ease-out: cubic-bezier(0.0,0.0,0.2,1);
       --lg-ease-in: cubic-bezier(0.4,0.0,1.0,1.0);
     }
-    /* Light mode tokens — 明確使用 class 強制套用，避免系統深色模式衝突 */
+    /* Light mode tokens — `:root` 設 light 預設值，.theme-dark 覆蓋深色，不依賴 media query */
+    :root,
     .theme-light {
       --lg-surface: rgba(255,255,255,0.78);
       --lg-surface-thin: rgba(255,255,255,0.55);
       --lg-surface-thick: rgba(255,255,255,0.95);
       --lg-border-top: rgba(255,255,255,0.90);
-      --lg-border-side: rgba(0,0,0,0.08);       /* 淺色模式用深色邊框才看得見 */
+      --lg-border-side: rgba(0,0,0,0.08);
       --lg-shadow: rgba(0,0,0,0.08);
       --lg-shadow-deep: rgba(0,0,0,0.14);
       --lg-text-primary: rgba(0,0,0,0.85);
       --lg-text-secondary: rgba(0,0,0,0.55);
       --lg-text-tertiary: rgba(0,0,0,0.38);
     }
-    /* Dark mode tokens */
+    /* Dark mode tokens — 唯一深色 token 來源，由 .theme-dark class 控制 */
     .theme-dark {
       --lg-surface: rgba(30,30,40,0.60);
       --lg-surface-thin: rgba(20,20,30,0.45);
@@ -51,35 +59,6 @@
       --lg-text-secondary: rgba(255,255,255,0.62);
       --lg-text-tertiary: rgba(255,255,255,0.40);
     }
-    /* System dark fallback (當 destTz 未設定，App 尚未決定時段時) */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --lg-surface: rgba(30,30,40,0.60);
-        --lg-surface-thin: rgba(20,20,30,0.45);
-        --lg-surface-thick: rgba(20,20,32,0.88);
-        --lg-border-top: rgba(255,255,255,0.20);
-        --lg-border-side: rgba(255,255,255,0.12);
-        --lg-shadow: rgba(0,0,0,0.32);
-        --lg-shadow-deep: rgba(0,0,0,0.55);
-        --lg-text-primary: rgba(255,255,255,0.92);
-        --lg-text-secondary: rgba(255,255,255,0.62);
-        --lg-text-tertiary: rgba(255,255,255,0.40);
-      }
-    }
-    @media (prefers-color-scheme: light) {
-      :root {
-        --lg-surface: rgba(255,255,255,0.78);
-        --lg-surface-thin: rgba(255,255,255,0.55);
-        --lg-surface-thick: rgba(255,255,255,0.95);
-        --lg-border-top: rgba(255,255,255,0.90);
-        --lg-border-side: rgba(0,0,0,0.08);
-        --lg-shadow: rgba(0,0,0,0.08);
-        --lg-shadow-deep: rgba(0,0,0,0.14);
-        --lg-text-primary: rgba(0,0,0,0.85);
-        --lg-text-secondary: rgba(0,0,0,0.55);
-        --lg-text-tertiary: rgba(0,0,0,0.38);
-      }
-    }
 
     /* ── Four-Layer Glass Material ───────────────────────────────────────────── */
     .lg-glass {
@@ -91,9 +70,17 @@
       box-shadow: 0 8px 32px var(--lg-shadow);
       transition: transform var(--lg-duration-base) ease-in-out, box-shadow var(--lg-duration-base) ease-in-out;
     }
-    /* 明確主題背景：!important 確保 iOS WebKit 在系統深色模式下仍套用正確背景 */
-    .theme-light .lg-glass { background: rgba(255,255,255,0.88) !important; border-color: rgba(0,0,0,0.07) !important; }
-    .theme-dark .lg-glass { background: rgba(30,30,40,0.72) !important; border-color: rgba(255,255,255,0.12) !important; }
+    /* 明確主題背景：架構修正後 media query 不再污染 :root，!important 僅保留必要處 */
+    .theme-light .lg-glass {
+      background: rgba(255,255,255,0.90);
+      border-color: rgba(0,0,0,0.07);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .theme-dark .lg-glass {
+      background: rgba(30,30,40,0.72);
+      border-color: rgba(255,255,255,0.12);
+    }
     .lg-glass::before {
       content: '';
       position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
@@ -186,6 +173,7 @@
       background: rgba(40,42,58,0.85);
       color: rgba(255,255,255,0.92);
       border-color: rgba(255,255,255,0.14);
+      color-scheme: dark;
     }
     .theme-dark .lg-input::placeholder { color: rgba(255,255,255,0.38); }
     .lg-input:focus {
@@ -262,13 +250,14 @@
     /* ── Background Gradients ────────────────────────────────────────────────── */
     .bg-sleep { background: linear-gradient(145deg, #0f172a 0%, #1e1b4b 45%, #1e3a5f 100%); }
     .bg-dawn  { background: linear-gradient(145deg, #431407 0%, #7c2d12 45%, #b45309 100%); }
-    .bg-awake { background: linear-gradient(145deg, #bfdbfe 0%, #e0f2fe 45%, #f8fafc 100%); }
+    .bg-awake { background: linear-gradient(145deg, #dbeafe 0%, #eff6ff 45%, #f8fafc 100%); }
     .bg-dusk  { background: linear-gradient(145deg, #4a0d1e 0%, #881337 45%, #92400e 100%); }
 
     /* ── Scrollbar & Input Resets ────────────────────────────────────────────── */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 2px; }
+    .theme-dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); }
     input[type="text"], input[type="time"], input[type="datetime-local"] {
       appearance: none; -webkit-appearance: none;
     }
@@ -384,7 +373,7 @@
     <div class="flex items-center justify-between py-4">
       <div>
         <h1 :class="['text-xl font-bold tracking-tight', isDark ? 'text-white' : 'text-slate-800']">時差調整助手</h1>
-        <p :class="['text-xs mt-0.5', isDark ? 'text-white/60' : 'text-slate-500']">基於醫學研究的時差建議</p>
+        <p :class="['text-xs mt-0.5', isDark ? 'text-white/75' : 'text-slate-600']">基於醫學研究的時差建議</p>
       </div>
       <div class="flex gap-2">
         <button @click="showKnowledge = true"
@@ -418,14 +407,14 @@
     <!-- Dual clocks -->
     <div v-if="destTz" class="mb-4 grid grid-cols-2 gap-3">
       <div class="rounded-3xl p-4 lg-glass">
-        <p :class="['text-xs font-medium mb-1', isDark ? 'text-white/60' : 'text-slate-500']">出發地</p>
+        <p :class="['text-xs font-medium mb-1', isDark ? 'text-white/75' : 'text-slate-600']">出發地</p>
         <p :class="['text-2xl font-light countdown-num', isDark ? 'text-white' : 'text-slate-800']">{{ originTime }}</p>
-        <p :class="['text-xs mt-1', isDark ? 'text-white/50' : 'text-slate-400']">{{ originTzLabel }}</p>
+        <p :class="['text-xs mt-1', isDark ? 'text-white/65' : 'text-slate-500']">{{ originTzLabel }}</p>
       </div>
       <div class="rounded-3xl p-4 lg-glass">
-        <p :class="['text-xs font-medium mb-1', isDark ? 'text-white/60' : 'text-slate-500']">目的地</p>
+        <p :class="['text-xs font-medium mb-1', isDark ? 'text-white/75' : 'text-slate-600']">目的地</p>
         <p :class="['text-2xl font-light countdown-num', isDark ? 'text-white' : 'text-slate-800']">{{ destTime }}</p>
-        <p :class="['text-xs mt-1', isDark ? 'text-white/50' : 'text-slate-400']">{{ destTzLabel }}</p>
+        <p :class="['text-xs mt-1', isDark ? 'text-white/65' : 'text-slate-500']">{{ destTzLabel }}</p>
       </div>
     </div>
 
@@ -456,11 +445,11 @@
 
       <!-- Origin -->
       <div class="mb-3 relative" :style="{ zIndex: showOriginDrop ? 10 : '' }">
-        <label :class="['text-xs mb-1.5 flex items-center gap-1.5', isDark ? 'text-white/60' : 'text-slate-600']">
+        <label :class="['text-xs mb-1.5 flex items-center gap-1.5', isDark ? 'text-white/75' : 'text-slate-600']">
           <span v-html="icon('plane', 13)"></span> 出發地
         </label>
         <div class="relative">
-          <input v-model="originSearch" @input="onOriginSearch" @focus="showOriginDrop = true" @blur="hideDrop('origin')"
+          <input v-model="originSearch" @input="onOriginSearch" @focus="showOriginDrop = true" @blur="hideDrop('origin')" @keydown="onOriginKeydown"
             class="lg-input"
             placeholder="搜尋城市或機場代號…">
           <div v-if="originTz && !showOriginDrop" :class="['absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono', isDark ? 'text-indigo-300/70' : 'text-indigo-500/80']">
@@ -468,26 +457,27 @@
           </div>
         </div>
         <div v-if="showOriginDrop && originResults.length > 0"
+          ref="originList"
           :class="['absolute z-40 left-0 right-0 mt-1 rounded-2xl overflow-hidden',
             isDark ? 'dropdown-list-dark' : 'dropdown-list']">
-          <div v-for="r in originResults" :key="r.tz + r.en"
+          <div v-for="(r, index) in originResults" :key="r.tz + r.en"
             @mousedown.prevent="selectOrigin(r)"
-            class="px-4 py-3 cursor-pointer dropdown-item">
+            :class="['px-4 py-3 cursor-pointer dropdown-item', index === originHighlight ? (isDark ? 'bg-white/10' : 'bg-indigo-500/10') : '']">
             <span :class="['text-sm font-medium', isDark ? 'text-white' : 'text-slate-800']">{{ r.zh }} · {{ r.en }}</span>
-            <span :class="['ml-2 text-xs', isDark ? 'text-white/50' : 'text-slate-500']">{{ r.countryZh }}</span>
+            <span :class="['ml-2 text-xs', isDark ? 'text-white/65' : 'text-slate-600']">{{ r.countryZh }}</span>
             <span :class="['ml-1.5 text-xs font-mono', isDark ? 'text-indigo-300/70' : 'text-indigo-500/80']">{{ getOffset(r.tz) }}</span>
-            <span v-if="r.iata" :class="['ml-1.5 text-xs font-mono opacity-60', isDark ? 'text-white/60' : 'text-slate-500']">{{ r.iata }}</span>
+            <span v-if="r.iata" :class="['ml-1.5 text-xs font-mono', isDark ? 'text-white/75' : 'text-slate-600']">{{ r.iata }}</span>
           </div>
         </div>
       </div>
 
       <!-- Destination -->
       <div class="relative" :style="{ zIndex: showDestDrop ? 10 : '' }">
-        <label :class="['text-xs mb-1.5 flex items-center gap-1.5', isDark ? 'text-white/60' : 'text-slate-600']">
+        <label :class="['text-xs mb-1.5 flex items-center gap-1.5', isDark ? 'text-white/75' : 'text-slate-600']">
           <span v-html="icon('mapPin', 13)"></span> 目的地
         </label>
         <div class="relative">
-          <input v-model="destSearch" @input="onDestSearch" @focus="showDestDrop = true" @blur="hideDrop('dest')"
+          <input v-model="destSearch" @input="onDestSearch" @focus="showDestDrop = true" @blur="hideDrop('dest')" @keydown="onDestKeydown"
             class="lg-input"
             placeholder="搜尋目的地城市或機場代號…">
           <div v-if="destTz && !showDestDrop" :class="['absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono', isDark ? 'text-indigo-300/70' : 'text-indigo-500/80']">
@@ -495,22 +485,23 @@
           </div>
         </div>
         <div v-if="showDestDrop && destResults.length > 0"
+          ref="destList"
           :class="['absolute z-40 left-0 right-0 mt-1 rounded-2xl overflow-hidden',
             isDark ? 'dropdown-list-dark' : 'dropdown-list']">
-          <div v-for="r in destResults" :key="r.tz + r.en"
+          <div v-for="(r, index) in destResults" :key="r.tz + r.en"
             @mousedown.prevent="selectDest(r)"
-            class="px-4 py-3 cursor-pointer dropdown-item">
+            :class="['px-4 py-3 cursor-pointer dropdown-item', index === destHighlight ? (isDark ? 'bg-white/10' : 'bg-indigo-500/10') : '']">
             <span :class="['text-sm font-medium', isDark ? 'text-white' : 'text-slate-800']">{{ r.zh }} · {{ r.en }}</span>
-            <span :class="['ml-2 text-xs', isDark ? 'text-white/50' : 'text-slate-500']">{{ r.countryZh }}</span>
+            <span :class="['ml-2 text-xs', isDark ? 'text-white/65' : 'text-slate-600']">{{ r.countryZh }}</span>
             <span :class="['ml-1.5 text-xs font-mono', isDark ? 'text-indigo-300/70' : 'text-indigo-500/80']">{{ getOffset(r.tz) }}</span>
-            <span v-if="r.iata" :class="['ml-1.5 text-xs font-mono opacity-60', isDark ? 'text-white/60' : 'text-slate-500']">{{ r.iata }}</span>
+            <span v-if="r.iata" :class="['ml-1.5 text-xs font-mono', isDark ? 'text-white/75' : 'text-slate-600']">{{ r.iata }}</span>
           </div>
         </div>
       </div>
 
       <!-- Reset Trip Button -->
       <button v-if="originTz || destTz" @click="resetTrip"
-        :class="['lg-btn lg-btn-ghost w-full mt-3 text-sm flex items-center justify-center gap-2', isDark ? 'text-white/60' : 'text-slate-600']">
+        :class="['lg-btn lg-btn-ghost w-full mt-3 text-sm flex items-center justify-center gap-2', isDark ? 'text-white/75' : 'text-slate-600']">
         <span v-html="icon('refreshCw', 14)"></span>
         重設旅程
       </button>
@@ -532,16 +523,14 @@
       <div v-if="tripStatus === 'none'">
         <div class="grid grid-cols-2 gap-2 mb-3">
           <div>
-            <label :class="['text-xs mb-1 block', isDark ? 'text-white/60' : 'text-slate-500']">出發時間</label>
+            <label :class="['text-xs mb-1 block', isDark ? 'text-white/75' : 'text-slate-600']">出發時間</label>
             <input type="datetime-local" v-model="tripDepartStr"
-              :class="['w-full rounded-xl px-3 py-2 text-sm outline-none lg-glass lg-glass-sm',
-                isDark ? 'text-white' : 'text-slate-800']">
+              :class="['lg-input', isDark ? 'text-white' : 'text-slate-800']">
           </div>
           <div>
-            <label :class="['text-xs mb-1 block', isDark ? 'text-white/60' : 'text-slate-500']">預計抵達</label>
+            <label :class="['text-xs mb-1 block', isDark ? 'text-white/75' : 'text-slate-600']">預計抵達</label>
             <input type="datetime-local" v-model="tripArriveStr"
-              :class="['w-full rounded-xl px-3 py-2 text-sm outline-none lg-glass lg-glass-sm',
-                isDark ? 'text-white' : 'text-slate-800']">
+              :class="['lg-input', isDark ? 'text-white' : 'text-slate-800']">
           </div>
         </div>
         <button @click="startTrip"
@@ -554,14 +543,14 @@
       <!-- Flying -->
       <div v-else-if="tripStatus === 'flying'" class="fade-in">
         <div class="text-center mb-4">
-          <p :class="['text-xs mb-1', isDark ? 'text-white/60' : 'text-slate-500']">距抵達目的地</p>
+          <p :class="['text-xs mb-1', isDark ? 'text-white/75' : 'text-slate-600']">距抵達目的地</p>
           <p :class="['text-3xl font-light countdown-num', isDark ? 'text-white' : 'text-slate-800']">{{ countdownStr }}</p>
         </div>
         <div :class="['rounded-2xl p-3 bg-blue-400/10 border border-blue-400/20 text-sm', isDark ? 'text-blue-200' : 'text-blue-800']">
           <p class="font-medium mb-1 flex items-center gap-1.5"><span v-html="icon('plane', 14)"></span> 機上建議</p>
           <p class="text-xs opacity-80">{{ inflightAdvice }}</p>
         </div>
-        <button @click="clearTrip" :class="['mt-3 w-full text-xs text-center opacity-60 hover:opacity-90 transition-opacity', isDark ? 'text-white' : 'text-slate-600']">
+        <button @click="clearTrip" :class="['mt-3 w-full text-xs text-center py-2 opacity-60 hover:opacity-90 transition-opacity', isDark ? 'text-white' : 'text-slate-600']">
           取消追蹤
         </button>
       </div>
@@ -588,7 +577,8 @@
     <!-- Advice cards -->
     <div v-if="destTz && Math.abs(timeDiffHours) > 0" class="mb-4 space-y-3">
       <div v-for="advice in currentAdviceList" :key="advice.id"
-        :class="['rounded-3xl p-4 lg-glass fade-in', advice.urgent ? 'border-amber-400/40' : '']">
+        class="rounded-3xl p-4 lg-glass fade-in"
+        :style="advice.urgent ? { outline: '1.5px solid rgba(251,191,36,0.55)' } : {}">
         <div class="flex items-start gap-3">
           <span :class="['flex-shrink-0 mt-0.5', isDark ? 'text-white/90' : 'text-slate-700']" v-html="icon(advice.icon, 22)"></span>
           <div>
@@ -613,7 +603,7 @@
           :class="['flex-1 h-1.5 rounded-full',
             n <= 2 ? 'bg-green-400/60' : n <= 4 ? 'bg-yellow-400/60' : 'bg-indigo-400/60']"></div>
       </div>
-      <p :class="['text-xs mt-1.5 text-right', isDark ? 'text-white/40' : 'text-slate-400']">約需 {{ adaptDays }} 天完全適應</p>
+      <p :class="['text-xs mt-1.5 text-right', isDark ? 'text-white/55' : 'text-slate-500']">約需 {{ adaptDays }} 天完全適應</p>
     </div>
 
     <!-- Disclaimer -->
@@ -625,7 +615,7 @@
     <div v-if="!destTz" class="text-center py-8">
       <div :class="['flex items-center justify-center mb-4 opacity-40', isDark ? 'text-white' : 'text-slate-500']" v-html="icon('globe', 56)"></div>
       <p :class="['text-base font-medium', isDark ? 'text-white/80' : 'text-slate-600']">設定目的地開始使用</p>
-      <p :class="['text-sm mt-1', isDark ? 'text-white/50' : 'text-slate-400']">在上方搜尋你的目的地城市</p>
+      <p :class="['text-sm mt-1', isDark ? 'text-white/65' : 'text-slate-500']">在上方搜尋你的目的地城市</p>
     </div>
 
     <!-- iOS Install hint -->
@@ -633,7 +623,7 @@
       <p :class="['text-sm font-medium mb-1 flex items-center justify-center gap-2', isDark ? 'text-white' : 'text-slate-800']">
         <span v-html="icon('smartphone', 16)"></span> 加入主畫面，離線使用
       </p>
-      <p :class="['text-xs', isDark ? 'text-white/60' : 'text-slate-500']">點擊 Safari 底部「分享」按鈕 → 「加入主畫面」</p>
+      <p :class="['text-xs', isDark ? 'text-white/75' : 'text-slate-600']">點擊 Safari 底部「分享」按鈕 → 「加入主畫面」</p>
       <button @click="showIOSHint = false" :class="['mt-2 text-xs opacity-50 hover:opacity-80 transition-opacity', isDark ? 'text-white' : 'text-slate-600']">不再顯示</button>
     </div>
 
@@ -662,7 +652,7 @@
             </label>
             <input type="time" v-model="settings.wakeTime" @change="saveSettings"
               :class="['lg-input', isDark ? 'text-white' : 'text-slate-800']">
-            <p :class="['text-xs mt-1', isDark ? 'text-white/50' : 'text-slate-400']">
+            <p :class="['text-xs mt-1', isDark ? 'text-white/65' : 'text-slate-500']">
               體溫最低點（CBTmin）= 起床前 2 小時（{{ cbTminTime }}）
             </p>
           </div>
@@ -676,7 +666,7 @@
         </div>
 
         <div :class="['mt-6 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200/60']">
-          <p :class="['text-xs', isDark ? 'text-white/40' : 'text-slate-400']">
+          <p :class="['text-xs', isDark ? 'text-white/55' : 'text-slate-500']">
             LocalStorage 儲存設定。不收集任何個人資料，所有運算在裝置本地執行。
           </p>
         </div>
@@ -692,7 +682,7 @@
       <div class="lg-sheet slide-up" style="max-height: 85vh;">
         <div class="lg-sheet-handle"></div>
         <h2 :class="['text-lg font-semibold mb-2', isDark ? 'text-white' : 'text-slate-800']">時差醫學知識</h2>
-        <p :class="['text-xs mb-5', isDark ? 'text-white/50' : 'text-slate-400']">基於 2025 年最新研究</p>
+        <p :class="['text-xs mb-5', isDark ? 'text-white/65' : 'text-slate-500']">基於 2025 年最新研究</p>
 
         <div class="space-y-4">
           <div v-for="k in knowledgeList" :key="k.title"
@@ -965,7 +955,7 @@ const CITIES = [
 ];
 
 // ── Vue App ───────────────────────────────────────────────────────────────────
-const { createApp, ref, computed, onMounted, onUnmounted, watch } = Vue;
+const { createApp, ref, computed, onMounted, onUnmounted, watch, nextTick } = Vue;
 
 createApp({
   setup() {
@@ -978,6 +968,10 @@ createApp({
     const destResults   = ref([]);
     const showOriginDrop = ref(false);
     const showDestDrop   = ref(false);
+    const originHighlight = ref(-1);
+    const destHighlight   = ref(-1);
+    const originList = ref(null);
+    const destList   = ref(null);
 
     const now = ref(new Date());
     const settings = ref({ wakeTime: '07:00', sleepTime: '22:00' });
@@ -1367,12 +1361,14 @@ createApp({
     // ── Search ───────────────────────────────────────────────────────────────
     const onOriginSearch = () => {
       const q = originSearch.value.trim();
+      originHighlight.value = -1;
       if (!q) { originResults.value = []; return; }
       originResults.value = CITIES.filter(c => fuzzyMatch(q, c)).slice(0, 10);
     };
 
     const onDestSearch = () => {
       const q = destSearch.value.trim();
+      destHighlight.value = -1;
       if (!q) { destResults.value = []; return; }
       destResults.value = CITIES.filter(c => fuzzyMatch(q, c)).slice(0, 10);
     };
@@ -1393,10 +1389,61 @@ createApp({
       saveSettings();
     };
 
+    const scrollHighlight = (listRef, index) => {
+      nextTick(() => {
+        const list = listRef.value;
+        if (!list) return;
+        const item = list.children[index];
+        if (item) item.scrollIntoView({ block: 'nearest' });
+      });
+    };
+
+    const onOriginKeydown = (e) => {
+      if (!showOriginDrop.value || !originResults.value.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        originHighlight.value = Math.min(originHighlight.value + 1, originResults.value.length - 1);
+        scrollHighlight(originList, originHighlight.value);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        originHighlight.value = Math.max(originHighlight.value - 1, 0);
+        scrollHighlight(originList, originHighlight.value);
+      } else if (e.key === 'Enter') {
+        if (originHighlight.value >= 0) {
+          e.preventDefault();
+          selectOrigin(originResults.value[originHighlight.value]);
+        }
+      } else if (e.key === 'Escape') {
+        showOriginDrop.value = false;
+        originHighlight.value = -1;
+      }
+    };
+
+    const onDestKeydown = (e) => {
+      if (!showDestDrop.value || !destResults.value.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        destHighlight.value = Math.min(destHighlight.value + 1, destResults.value.length - 1);
+        scrollHighlight(destList, destHighlight.value);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        destHighlight.value = Math.max(destHighlight.value - 1, 0);
+        scrollHighlight(destList, destHighlight.value);
+      } else if (e.key === 'Enter') {
+        if (destHighlight.value >= 0) {
+          e.preventDefault();
+          selectDest(destResults.value[destHighlight.value]);
+        }
+      } else if (e.key === 'Escape') {
+        showDestDrop.value = false;
+        destHighlight.value = -1;
+      }
+    };
+
     const hideDrop = (which) => {
       setTimeout(() => {
-        if (which === 'origin') showOriginDrop.value = false;
-        else showDestDrop.value = false;
+        if (which === 'origin') { showOriginDrop.value = false; originHighlight.value = -1; }
+        else { showDestDrop.value = false; destHighlight.value = -1; }
       }, 150);
     };
 
@@ -1545,6 +1592,7 @@ createApp({
     return {
       originTz, destTz, originSearch, destSearch,
       originResults, destResults, showOriginDrop, showDestDrop,
+      originHighlight, destHighlight, originList, destList,
       now, settings,
       tripDepartStr, tripArriveStr, tripStatus, showArrivalDialog,
       showSettings, showKnowledge, showUpdateBanner, showIOSHint, showStorageWarn, deferredPrompt,
@@ -1554,7 +1602,7 @@ createApp({
       statusIcon, statusTitle, statusSubtitle,
       nearCBTmin, cbTminAdvice, cbTminTime,
       currentAdviceList, countdownStr, inflightAdvice, arrivedTips,
-      onOriginSearch, onDestSearch, selectOrigin, selectDest, hideDrop,
+      onOriginSearch, onDestSearch, onOriginKeydown, onDestKeydown, selectOrigin, selectDest, hideDrop,
       startTrip, clearTrip, resetTrip, confirmArrival, snoozeArrival,
       installPWA, reloadApp, getOffset, saveSettings,
       knowledgeList, icon,
