@@ -91,9 +91,9 @@
       box-shadow: 0 8px 32px var(--lg-shadow);
       transition: transform var(--lg-duration-base) ease-in-out, box-shadow var(--lg-duration-base) ease-in-out;
     }
-    /* 明確主題背景避免 CSS variable 在系統深色模式下的 cascade 問題 */
-    .theme-light .lg-glass { background: rgba(255,255,255,0.82); border-color: rgba(0,0,0,0.07); }
-    .theme-dark .lg-glass { background: rgba(30,30,40,0.62); border-color: rgba(255,255,255,0.12); }
+    /* 明確主題背景：!important 確保 iOS WebKit 在系統深色模式下仍套用正確背景 */
+    .theme-light .lg-glass { background: rgba(255,255,255,0.88) !important; border-color: rgba(0,0,0,0.07) !important; }
+    .theme-dark .lg-glass { background: rgba(30,30,40,0.72) !important; border-color: rgba(255,255,255,0.12) !important; }
     .lg-glass::before {
       content: '';
       position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
@@ -452,11 +452,11 @@
 
     <!-- Timezone Setup -->
     <div class="rounded-3xl p-4 lg-glass mb-4" :style="{ zIndex: (showOriginDrop || showDestDrop) ? 30 : 'auto' }">
-      <h2 :class="['text-sm font-semibold mb-3', isDark ? 'text-white/80' : 'text-slate-600']">時區設定</h2>
+      <h2 :class="['text-sm font-semibold mb-3', isDark ? 'text-white/80' : 'text-slate-700']">時區設定</h2>
 
       <!-- Origin -->
       <div class="mb-3 relative" :style="{ zIndex: showOriginDrop ? 10 : '' }">
-        <label :class="['text-xs mb-1.5 flex items-center gap-1.5', isDark ? 'text-white/60' : 'text-slate-500']">
+        <label :class="['text-xs mb-1.5 flex items-center gap-1.5', isDark ? 'text-white/60' : 'text-slate-600']">
           <span v-html="icon('plane', 13)"></span> 出發地
         </label>
         <div class="relative">
@@ -483,7 +483,7 @@
 
       <!-- Destination -->
       <div class="relative" :style="{ zIndex: showDestDrop ? 10 : '' }">
-        <label :class="['text-xs mb-1.5 flex items-center gap-1.5', isDark ? 'text-white/60' : 'text-slate-500']">
+        <label :class="['text-xs mb-1.5 flex items-center gap-1.5', isDark ? 'text-white/60' : 'text-slate-600']">
           <span v-html="icon('mapPin', 13)"></span> 目的地
         </label>
         <div class="relative">
@@ -510,7 +510,7 @@
 
       <!-- Reset Trip Button -->
       <button v-if="originTz || destTz" @click="resetTrip"
-        :class="['lg-btn lg-btn-ghost w-full mt-3 text-sm flex items-center justify-center gap-2', isDark ? 'text-white/60' : 'text-slate-500']">
+        :class="['lg-btn lg-btn-ghost w-full mt-3 text-sm flex items-center justify-center gap-2', isDark ? 'text-white/60' : 'text-slate-600']">
         <span v-html="icon('refreshCw', 14)"></span>
         重設旅程
       </button>
