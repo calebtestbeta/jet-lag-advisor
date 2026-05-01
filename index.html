@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="時差助手">
+  <meta name="theme-color" content="#4338ca" id="theme-color-meta">
+  <title>時差調整助手</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.svg">
+  <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif; overscroll-behavior: none; }
+
+    /* ── Liquid Glass Design Tokens ─────────────────────────────────────────── */
+    :root {
+      --lg-blur-sm: 10px; --lg-blur-md: 20px; --lg-blur-lg: 32px;
+      --lg-radius-sm: 12px; --lg-radius-md: 20px; --lg-radius-lg: 28px; --lg-radius-pill: 9999px;
+      --lg-duration-fast: 150ms; --lg-duration-base: 280ms; --lg-duration-slow: 400ms;
+      --lg-ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+      --lg-ease-out: cubic-bezier(0.0,0.0,0.2,1);
+      --lg-ease-in: cubic-bezier(0.4,0.0,1.0,1.0);
+    }
+    /* Light mode tokens — 明確使用 class 強制套用，避免系統深色模式衝突 */
+    .theme-light {
+      --lg-surface: rgba(255,255,255,0.78);
+      --lg-surface-thin: rgba(255,255,255,0.55);
+      --lg-surface-thick: rgba(255,255,255,0.95);
+      --lg-border-top: rgba(255,255,255,0.90);
+      --lg-border-side: rgba(0,0,0,0.08);       /* 淺色模式用深色邊框才看得見 */
+      --lg-shadow: rgba(0,0,0,0.08);
+      --lg-shadow-deep: rgba(0,0,0,0.14);
+      --lg-text-primary: rgba(0,0,0,0.85);
+      --lg-text-secondary: rgba(0,0,0,0.55);
+      --lg-text-tertiary: rgba(0,0,0,0.38);
+    }
+    /* Dark mode tokens */
+    .theme-dark {
+      --lg-surface: rgba(30,30,40,0.60);
+      --lg-surface-thin: rgba(20,20,30,0.45);
+      --lg-surface-thick: rgba(20,20,32,0.88);
+      --lg-border-top: rgba(255,255,255,0.20);
+      --lg-border-side: rgba(255,255,255,0.12);
+      --lg-shadow: rgba(0,0,0,0.32);
+      --lg-shadow-deep: rgba(0,0,0,0.55);
+      --lg-text-primary: rgba(255,255,255,0.92);
+      --lg-text-secondary: rgba(255,255,255,0.62);
+      --lg-text-tertiary: rgba(255,255,255,0.40);
+    }
+    /* System dark fallback (當 destTz 未設定，App 尚未決定時段時) */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --lg-surface: rgba(30,30,40,0.60);
+        --lg-surface-thin: rgba(20,20,30,0.45);
+        --lg-surface-thick: rgba(20,20,32,0.88);
+        --lg-border-top: rgba(255,255,255,0.20);
+        --lg-border-side: rgba(255,255,255,0.12);
+        --lg-shadow: rgba(0,0,0,0.32);
+        --lg-shadow-deep: rgba(0,0,0,0.55);
+        --lg-text-primary: rgba(255,255,255,0.92);
+        --lg-text-secondary: rgba(255,255,255,0.62);
+        --lg-text-tertiary: rgba(255,255,255,0.40);
+      }
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --lg-surface: rgba(255,255,255,0.78);
+        --lg-surface-thin: rgba(255,255,255,0.55);
+        --lg-surface-thick: rgba(255,255,255,0.95);
+        --lg-border-top: rgba(255,255,255,0.90);
+        --lg-border-side: rgba(0,0,0,0.08);
+        --lg-shadow: rgba(0,0,0,0.08);
+        --lg-shadow-deep: rgba(0,0,0,0.14);
+        --lg-text-primary: rgba(0,0,0,0.85);
+        --lg-text-secondary: rgba(0,0,0,0.55);
+        --lg-text-tertiary: rgba(0,0,0,0.38);
+      }
+    }
+
+    /* ── Four-Layer Glass Material ───────────────────────────────────────────── */
+    .lg-glass {
+      position: relative;
+      background: var(--lg-surface);
+      backdrop-filter: blur(var(--lg-blur-md)) saturate(160%) brightness(1.02);
+      -webkit-backdrop-filter: blur(var(--lg-blur-md)) saturate(160%) brightness(1.02);
+      border: 1px solid var(--lg-border-side);
+      box-shadow: 0 8px 32px var(--lg-shadow);
+      transition: transform var(--lg-duration-base) ease-in-out, box-shadow var(--lg-duration-base) ease-in-out;
+    }
+    /* 明確主題背景避免 CSS variable 在系統深色模式下的 cascade 問題 */
+    .theme-light .lg-glass { background: rgba(255,255,255,0.82); border-color: rgba(0,0,0,0.07); }
+    .theme-dark .lg-glass { background: rgba(30,30,40,0.62); border-color: rgba(255,255,255,0.12); }
+    .lg-glass::before {
+      content: '';
+      position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      box-shadow: inset 0 1px 0 var(--lg-border-top), inset 0 -1px 0 rgba(0,0,0,0.04),
+                  inset 1px 0 0 rgba(255,255,255,0.10), inset -1px 0 0 rgba(255,255,255,0.10);
+      background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 40%);
+      z-index: 1;
+    }
+    .lg-glass::after {
+      content: '';
+      position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(135deg, rgba(180,200,255,0.08) 0%, rgba(255,255,255,0) 50%, rgba(255,180,160,0.05) 100%);
+      z-index: 1;
+    }
+    .lg-glass > * { position: relative; z-index: 2; }
+    .lg-glass-sm {
+      backdrop-filter: blur(var(--lg-blur-sm)) saturate(200%);
+      -webkit-backdrop-filter: blur(var(--lg-blur-sm)) saturate(200%);
+    }
+    .lg-glass-lg {
+      backdrop-filter: blur(var(--lg-blur-lg)) saturate(200%);
+      -webkit-backdrop-filter: blur(var(--lg-blur-lg)) saturate(200%);
+    }
+    @media (hover: hover) {
+      .lg-glass:hover { transform: translateY(-2px); box-shadow: 0 12px 40px var(--lg-shadow-deep); }
+    }
+
+    /* ── Button System ───────────────────────────────────────────────────────── */
+    .lg-btn {
+      position: relative; isolation: isolate; overflow: hidden;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      cursor: pointer; border: none; font-family: inherit; font-size: 0.875rem; font-weight: 500;
+      transition: transform var(--lg-duration-fast) var(--lg-ease-spring),
+                  box-shadow var(--lg-duration-fast) ease-in-out,
+                  background var(--lg-duration-base) ease-in-out;
+    }
+    .lg-btn:hover:not(:disabled) { transform: translateY(-1px) scale(1.01); }
+    .lg-btn:active:not(:disabled) { transform: scale(0.97) !important; }
+    .lg-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+    .lg-btn:focus-visible { outline: 2px solid rgba(0,102,255,0.80); outline-offset: 2px; }
+    .lg-btn-primary {
+      border-radius: var(--lg-radius-pill); padding: 12px 24px;
+      background: rgba(99,102,241,0.80);
+      backdrop-filter: blur(var(--lg-blur-sm)) saturate(200%);
+      -webkit-backdrop-filter: blur(var(--lg-blur-sm)) saturate(200%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(99,102,241,0.35), inset 0 1px 0 rgba(255,255,255,0.35);
+    }
+    .lg-btn-primary:hover:not(:disabled) { background: rgba(99,102,241,0.95); }
+    .lg-btn-secondary {
+      border-radius: var(--lg-radius-md); padding: 12px 20px;
+      background: var(--lg-surface);
+      backdrop-filter: blur(var(--lg-blur-sm)) saturate(160%);
+      -webkit-backdrop-filter: blur(var(--lg-blur-sm)) saturate(160%);
+      color: var(--lg-text-primary);
+      box-shadow: 0 2px 8px var(--lg-shadow), inset 0 1px 0 var(--lg-border-top);
+      border: 1px solid var(--lg-border-side);
+    }
+    .lg-btn-ghost {
+      border-radius: var(--lg-radius-md); padding: 10px 20px;
+      background: rgba(255,255,255,0.08); color: var(--lg-text-secondary);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .theme-light .lg-btn-ghost {
+      background: rgba(0,0,0,0.05); color: rgba(0,0,0,0.55);
+      border-color: rgba(0,0,0,0.10);
+    }
+    .theme-light .lg-btn-ghost:hover:not(:disabled) { background: rgba(0,0,0,0.09); }
+    .lg-btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.15); }
+
+    /* ── Glass Input ─────────────────────────────────────────────────────────── */
+    .lg-input {
+      border: 1px solid var(--lg-border-side);
+      border-radius: var(--lg-radius-md);
+      padding: 12px 40px 12px 16px;
+      font-size: 0.875rem;
+      outline: none; width: 100%; caret-color: #007AFF;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+      transition: border-color var(--lg-duration-fast), box-shadow var(--lg-duration-fast);
+      font-family: inherit;
+    }
+    /* 明確主題色避免 backdrop-filter 疊加導致輸入框過暗 */
+    .theme-light .lg-input {
+      background: rgba(255,255,255,0.92);
+      color: rgba(0,0,0,0.85);
+      border-color: rgba(0,0,0,0.10);
+    }
+    .theme-light .lg-input::placeholder { color: rgba(0,0,0,0.35); }
+    .theme-dark .lg-input {
+      background: rgba(40,42,58,0.85);
+      color: rgba(255,255,255,0.92);
+      border-color: rgba(255,255,255,0.14);
+    }
+    .theme-dark .lg-input::placeholder { color: rgba(255,255,255,0.38); }
+    .lg-input:focus {
+      border-color: rgba(0,122,255,0.60);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.06), 0 0 0 3px rgba(0,122,255,0.20);
+    }
+    .lg-input::placeholder { color: var(--lg-text-tertiary); }
+
+    /* ── Overlay & Bottom Sheet ──────────────────────────────────────────────── */
+    .lg-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }
+    .lg-sheet {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      max-width: 28rem; margin: 0 auto;
+      border-radius: 28px 28px 0 0;
+      background: var(--lg-surface);
+      backdrop-filter: blur(var(--lg-blur-lg)) saturate(200%);
+      -webkit-backdrop-filter: blur(var(--lg-blur-lg)) saturate(200%);
+      box-shadow: 0 -8px 40px var(--lg-shadow-deep),
+                  inset 0 1px 0 var(--lg-border-top),
+                  inset 1px 0 0 var(--lg-border-side),
+                  inset -1px 0 0 var(--lg-border-side);
+      padding: 24px; max-height: 85vh; overflow-y: auto;
+    }
+    .lg-sheet-handle {
+      width: 36px; height: 4px;
+      background: rgba(128,128,160,0.40);
+      border-radius: 2px; margin: 0 auto 20px;
+    }
+
+    /* ── Status Pill ─────────────────────────────────────────────────────────── */
+    .lg-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: var(--lg-radius-pill);
+      font-size: 0.75rem; font-weight: 500;
+      background: var(--lg-surface); border: 1px solid var(--lg-border-side);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.60);
+      color: var(--lg-text-primary);
+    }
+    .lg-pill.success { background: rgba(52,199,89,0.18); border-color: rgba(52,199,89,0.35); color: rgb(52,199,89); }
+    .lg-pill.warning { background: rgba(255,159,10,0.18); border-color: rgba(255,159,10,0.35); color: rgb(255,159,10); }
+    .lg-pill.danger  { background: rgba(255,59,48,0.18);  border-color: rgba(255,59,48,0.35);  color: rgb(255,59,48); }
+    .lg-pill.info    { background: rgba(10,132,255,0.18); border-color: rgba(10,132,255,0.35); color: rgb(10,132,255); }
+
+    /* ── Icon System ─────────────────────────────────────────────────────────── */
+    .lg-icon { stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .lg-icon-btn {
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: none;
+      background: var(--lg-surface);
+      backdrop-filter: blur(var(--lg-blur-sm)); -webkit-backdrop-filter: blur(var(--lg-blur-sm));
+      border: 1px solid var(--lg-border-side);
+      box-shadow: inset 0 1px 0 var(--lg-border-top);
+      transition: transform var(--lg-duration-fast) var(--lg-ease-spring);
+      color: inherit; position: relative;
+    }
+    .lg-icon-btn::before {
+      content: ''; position: absolute; inset: 0; border-radius: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 50%);
+      pointer-events: none;
+    }
+    .lg-icon-btn:hover { transform: scale(1.06); }
+    .lg-icon-btn:active { transform: scale(0.94); }
+
+    /* ── Theme Transitions ───────────────────────────────────────────────────── */
+    .theme-transition, .theme-transition * {
+      transition: background 2s ease-in-out, color 1.5s ease-in-out, border-color 1.5s ease-in-out, box-shadow 1.5s ease-in-out !important;
+    }
+
+    /* ── Background Gradients ────────────────────────────────────────────────── */
+    .bg-sleep { background: linear-gradient(145deg, #0f172a 0%, #1e1b4b 45%, #1e3a5f 100%); }
+    .bg-dawn  { background: linear-gradient(145deg, #431407 0%, #7c2d12 45%, #b45309 100%); }
+    .bg-awake { background: linear-gradient(145deg, #bfdbfe 0%, #e0f2fe 45%, #f8fafc 100%); }
+    .bg-dusk  { background: linear-gradient(145deg, #4a0d1e 0%, #881337 45%, #92400e 100%); }
+
+    /* ── Scrollbar & Input Resets ────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+    input[type="text"], input[type="time"], input[type="datetime-local"] {
+      appearance: none; -webkit-appearance: none;
+    }
+    input[type="time"]::-webkit-calendar-picker-indicator,
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      filter: invert(1); opacity: 0.5;
+    }
+    .theme-light input[type="time"]::-webkit-calendar-picker-indicator,
+    .theme-light input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      filter: none; opacity: 0.45;
+    }
+
+    /* ── Dropdown ────────────────────────────────────────────────────────────── */
+    .dropdown-list {
+      background: rgba(255,255,255,0.96); border: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    }
+    .dropdown-list-dark {
+      background: rgba(20,24,40,0.96); border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    }
+    .dropdown-item { border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover { background: rgba(99,102,241,0.08); }
+    .dropdown-list-dark .dropdown-item { border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .dropdown-list-dark .dropdown-item:hover { background: rgba(255,255,255,0.08); }
+
+    /* ── Animations ──────────────────────────────────────────────────────────── */
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(251,191,36,0); }
+    }
+    .cbtmin-alert { animation: pulse-glow 2s infinite; }
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .slide-up { animation: slideUp 0.4s cubic-bezier(0.0,0.0,0.2,1); }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.4s ease-out; }
+    .countdown-num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+
+    /* ── Safe Areas ──────────────────────────────────────────────────────────── */
+    .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+    .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px); }
+
+    /* ── Sheet Transitions ───────────────────────────────────────────────────── */
+    .sheet-enter-active { transition: opacity var(--lg-duration-base) ease; }
+    .sheet-leave-active { transition: opacity 0.2s ease; }
+    .sheet-enter-from, .sheet-leave-to { opacity: 0; }
+    .sheet-enter-active .lg-sheet { transition: transform var(--lg-duration-slow) var(--lg-ease-out); }
+    .sheet-leave-active .lg-sheet { transition: transform 280ms var(--lg-ease-in); }
+    .sheet-enter-from .lg-sheet, .sheet-leave-to .lg-sheet { transform: translateY(100%); }
+
+    /* Fade transition */
+    .fade-enter-active { transition: opacity 0.2s ease; }
+    .fade-leave-active { transition: opacity 0.15s ease; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+    /* ── Accessibility ───────────────────────────────────────────────────────── */
+    @media (prefers-reduced-transparency: reduce) {
+      .lg-glass, .lg-glass-sm, .lg-glass-lg, .lg-btn-primary, .lg-btn-secondary,
+      .lg-input, .lg-sheet, .lg-pill, .lg-icon-btn {
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+      }
+      .theme-dark .lg-glass, .theme-dark .lg-sheet, .theme-dark .lg-icon-btn { background: rgba(28,28,36,0.97) !important; }
+      .lg-glass, .lg-sheet, .lg-icon-btn { background: rgba(255,255,255,0.97) !important; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+<!-- SVG refraction filters (hidden) -->
+<svg aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
+  <defs>
+    <filter id="lg-refract-sm" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="20" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="lg-refract-md" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="55" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
+<div id="app" :class="['min-h-screen transition-all duration-1000', bgClass, isDark ? 'theme-dark text-white' : 'theme-light text-slate-800']">
+
+  <!-- Update banner -->
+  <div v-if="showUpdateBanner" class="fixed top-0 left-0 right-0 z-50 safe-top">
+    <div :class="['m-3 px-4 py-3 rounded-2xl lg-glass text-sm flex items-center justify-between', isDark ? 'text-white' : 'text-slate-800']">
+      <span class="flex items-center gap-2"><span v-html="icon('refreshCw', 16)"></span>App 已更新</span>
+      <button @click="reloadApp" class="bg-white/20 px-3 py-1 rounded-xl text-xs font-medium">重新載入</button>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="max-w-md mx-auto px-4 safe-top" style="padding-top: max(env(safe-area-inset-top, 0px), 16px)">
+
+    <!-- Storage warning -->
+    <div v-if="showStorageWarn" :class="['mb-3 px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/30 text-xs flex items-center gap-2', isDark ? 'text-amber-200' : 'text-amber-800']">
+      <span v-html="icon('alertTriangle', 16)"></span>
+      <span>私密瀏覽模式：設定無法儲存，重新整理後將重置。</span>
+    </div>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between py-4">
+      <div>
+        <h1 :class="['text-xl font-bold tracking-tight', isDark ? 'text-white' : 'text-slate-800']">時差調整助手</h1>
+        <p :class="['text-xs mt-0.5', isDark ? 'text-white/60' : 'text-slate-500']">基於醫學研究的時差建議</p>
+      </div>
+      <div class="flex gap-2">
+        <button @click="showKnowledge = true"
+          :class="['lg-icon-btn', isDark ? 'text-white' : 'text-slate-700']"
+          aria-label="時差知識">
+          <span v-html="icon('bookOpen', 20)"></span>
+        </button>
+        <button @click="showSettings = true"
+          :class="['lg-icon-btn', isDark ? 'text-white' : 'text-slate-700']"
+          aria-label="設定">
+          <span v-html="icon('settings', 20)"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status indicator -->
+    <div v-if="destTz" class="mb-4 fade-in">
+      <div :class="['rounded-3xl p-5 lg-glass text-center', nearCBTmin ? 'cbtmin-alert' : '']">
+        <div class="flex items-center justify-center mb-3 opacity-90" v-html="icon(statusIcon, 52)"></div>
+        <div :class="['text-lg font-semibold', isDark ? 'text-white' : 'text-slate-800']">{{ statusTitle }}</div>
+        <div :class="['text-sm mt-1', isDark ? 'text-white/70' : 'text-slate-600']">{{ statusSubtitle }}</div>
+        <div v-if="nearCBTmin" class="mt-3 px-3 py-2 bg-amber-400/20 rounded-2xl border border-amber-400/40">
+          <p :class="['text-xs font-medium flex items-center justify-center gap-1.5', isDark ? 'text-amber-300' : 'text-amber-700']">
+            <span v-html="icon('zap', 14)"></span> 現在是體溫最低點（CBTmin）時段
+          </p>
+          <p :class="['text-xs mt-0.5', isDark ? 'text-amber-200/80' : 'text-amber-700/70']">{{ cbTminAdvice }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dual clocks -->
+    <div v-if="destTz" class="mb-4 grid grid-cols-2 gap-3">
+      <div class="rounded-3xl p-4 lg-glass">
+        <p :class="['text-xs font-medium mb-1', isDark ? 'text-white/60' : 'text-slate-500']">出發地</p>
+        <p :class="['text-2xl font-light countdown-num', isDark ? 'text-white' : 'text-slate-800']">{{ originTime }}</p>
+        <p :class="['text-xs mt-1', isDark ? 'text-white/50' : 'text-slate-400']">{{ originTzLabel }}</p>
+      </div>
+      <div class="rounded-3xl p-4 lg-glass">
+        <p :class="['text-xs font-medium mb-1', isDark ? 'text-white/60' : 'text-slate-500']">目的地</p>
+        <p :class="['text-2xl font-light countdown-num', isDark ? 'text-white' : 'text-slate-800']">{{ destTime }}</p>
+        <p :class="['text-xs mt-1', isDark ? 'text-white/50' : 'text-slate-400']">{{ destTzLabel }}</p>
+      </div>
+    </div>
+
+    <!-- Time diff badge -->
+    <div v-if="destTz && timeDiffHours !== 0" class="mb-4 text-center">
+      <span :class="['lg-pill', severity === 'mild' ? 'success' : severity === 'moderate' ? 'warning' : 'danger',
+        isDark ? '' : '']">
+        <span v-html="icon('plane', 12)"></span>
+        <span>{{ flightDirection === 'east' ? '向東飛' : '向西飛' }}</span>
+        <span class="opacity-50 mx-0.5">·</span>
+        <span>時差 {{ Math.abs(timeDiffHours) }} 小時</span>
+        <template v-if="Math.abs(timeDiffHours) > 3">
+          <span class="opacity-50 mx-0.5">·</span>
+          <span>{{ severityLabel }}</span>
+        </template>
+      </span>
+    </div>
+    <div v-else-if="destTz && timeDiffHours === 0" class="mb-4 text-center">
+      <span class="lg-pill info">
+        <span v-html="icon('check', 12)"></span>
+        <span>相同時區，無需調整時差</span>
+      </span>
+    </div>
+
+    <!-- Timezone Setup -->
+    <div class="rounded-3xl p-4 lg-glass mb-4" :style="{ zIndex: (showOriginDrop || showDestDrop) ? 30 : 'auto' }">
+      <h2 :class="['text-sm font-semibold mb-3', isDark ? 'text-white/80' : 'text-slate-600']">時區設定</h2>
+
+      <!-- Origin -->
+      <div class="mb-3 relative" :style="{ zIndex: showOriginDrop ? 10 : '' }">
+        <label :class="['text-xs mb-1.5 flex items-center gap-1.5', isDark ? 'text-white/60' : 'text-slate-500']">
+          <span v-html="icon('plane', 13)"></span> 出發地
+        </label>
+        <div class="relative">
+          <input v-model="originSearch" @input="onOriginSearch" @focus="showOriginDrop = true" @blur="hideDrop('origin')"
+            class="lg-input"
+            placeholder="搜尋城市或機場代號…">
+          <div v-if="originTz && !showOriginDrop" :class="['absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono', isDark ? 'text-indigo-300/70' : 'text-indigo-500/80']">
+            {{ getOffset(originTz) }}
+          </div>
+        </div>
+        <div v-if="showOriginDrop && originResults.length > 0"
+          :class="['absolute z-40 left-0 right-0 mt-1 rounded-2xl overflow-hidden',
+            isDark ? 'dropdown-list-dark' : 'dropdown-list']">
+          <div v-for="r in originResults" :key="r.tz + r.en"
+            @mousedown.prevent="selectOrigin(r)"
+            class="px-4 py-3 cursor-pointer dropdown-item">
+            <span :class="['text-sm font-medium', isDark ? 'text-white' : 'text-slate-800']">{{ r.zh }} · {{ r.en }}</span>
+            <span :class="['ml-2 text-xs', isDark ? 'text-white/50' : 'text-slate-500']">{{ r.countryZh }}</span>
+            <span :class="['ml-1.5 text-xs font-mono', isDark ? 'text-indigo-300/70' : 'text-indigo-500/80']">{{ getOffset(r.tz) }}</span>
+            <span v-if="r.iata" :class="['ml-1.5 text-xs font-mono opacity-60', isDark ? 'text-white/60' : 'text-slate-500']">{{ r.iata }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Destination -->
+      <div class="relative" :style="{ zIndex: showDestDrop ? 10 : '' }">
+        <label :class="['text-xs mb-1.5 flex items-center gap-1.5', isDark ? 'text-white/60' : 'text-slate-500']">
+          <span v-html="icon('mapPin', 13)"></span> 目的地
+        </label>
+        <div class="relative">
+          <input v-model="destSearch" @input="onDestSearch" @focus="showDestDrop = true" @blur="hideDrop('dest')"
+            class="lg-input"
+            placeholder="搜尋目的地城市或機場代號…">
+          <div v-if="destTz && !showDestDrop" :class="['absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono', isDark ? 'text-indigo-300/70' : 'text-indigo-500/80']">
+            {{ getOffset(destTz) }}
+          </div>
+        </div>
+        <div v-if="showDestDrop && destResults.length > 0"
+          :class="['absolute z-40 left-0 right-0 mt-1 rounded-2xl overflow-hidden',
+            isDark ? 'dropdown-list-dark' : 'dropdown-list']">
+          <div v-for="r in destResults" :key="r.tz + r.en"
+            @mousedown.prevent="selectDest(r)"
+            class="px-4 py-3 cursor-pointer dropdown-item">
+            <span :class="['text-sm font-medium', isDark ? 'text-white' : 'text-slate-800']">{{ r.zh }} · {{ r.en }}</span>
+            <span :class="['ml-2 text-xs', isDark ? 'text-white/50' : 'text-slate-500']">{{ r.countryZh }}</span>
+            <span :class="['ml-1.5 text-xs font-mono', isDark ? 'text-indigo-300/70' : 'text-indigo-500/80']">{{ getOffset(r.tz) }}</span>
+            <span v-if="r.iata" :class="['ml-1.5 text-xs font-mono opacity-60', isDark ? 'text-white/60' : 'text-slate-500']">{{ r.iata }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reset Trip Button -->
+      <button v-if="originTz || destTz" @click="resetTrip"
+        :class="['lg-btn lg-btn-ghost w-full mt-3 text-sm flex items-center justify-center gap-2', isDark ? 'text-white/60' : 'text-slate-500']">
+        <span v-html="icon('refreshCw', 14)"></span>
+        重設旅程
+      </button>
+    </div>
+
+    <!-- Travel Session Card -->
+    <div v-if="destTz" class="rounded-3xl p-4 lg-glass mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 :class="['text-sm font-semibold', isDark ? 'text-white/80' : 'text-slate-600']">航程管理</h2>
+        <span v-if="tripStatus === 'flying'" class="lg-pill info flex items-center gap-1">
+          <span v-html="icon('plane', 12)"></span> 飛行中
+        </span>
+        <span v-else-if="tripStatus === 'arrived'" class="lg-pill success flex items-center gap-1">
+          <span v-html="icon('checkCircle', 12)"></span> 已抵達
+        </span>
+      </div>
+
+      <!-- No trip setup -->
+      <div v-if="tripStatus === 'none'">
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div>
+            <label :class="['text-xs mb-1 block', isDark ? 'text-white/60' : 'text-slate-500']">出發時間</label>
+            <input type="datetime-local" v-model="tripDepartStr"
+              :class="['w-full rounded-xl px-3 py-2 text-sm outline-none lg-glass lg-glass-sm',
+                isDark ? 'text-white' : 'text-slate-800']">
+          </div>
+          <div>
+            <label :class="['text-xs mb-1 block', isDark ? 'text-white/60' : 'text-slate-500']">預計抵達</label>
+            <input type="datetime-local" v-model="tripArriveStr"
+              :class="['w-full rounded-xl px-3 py-2 text-sm outline-none lg-glass lg-glass-sm',
+                isDark ? 'text-white' : 'text-slate-800']">
+          </div>
+        </div>
+        <button @click="startTrip"
+          :disabled="!tripDepartStr || !tripArriveStr"
+          class="w-full lg-btn lg-btn-primary">
+          開始追蹤航程
+        </button>
+      </div>
+
+      <!-- Flying -->
+      <div v-else-if="tripStatus === 'flying'" class="fade-in">
+        <div class="text-center mb-4">
+          <p :class="['text-xs mb-1', isDark ? 'text-white/60' : 'text-slate-500']">距抵達目的地</p>
+          <p :class="['text-3xl font-light countdown-num', isDark ? 'text-white' : 'text-slate-800']">{{ countdownStr }}</p>
+        </div>
+        <div :class="['rounded-2xl p-3 bg-blue-400/10 border border-blue-400/20 text-sm', isDark ? 'text-blue-200' : 'text-blue-800']">
+          <p class="font-medium mb-1 flex items-center gap-1.5"><span v-html="icon('plane', 14)"></span> 機上建議</p>
+          <p class="text-xs opacity-80">{{ inflightAdvice }}</p>
+        </div>
+        <button @click="clearTrip" :class="['mt-3 w-full text-xs text-center opacity-60 hover:opacity-90 transition-opacity', isDark ? 'text-white' : 'text-slate-600']">
+          取消追蹤
+        </button>
+      </div>
+
+      <!-- Arrived mode -->
+      <div v-else-if="tripStatus === 'arrived'" class="fade-in">
+        <p :class="['text-sm mb-3 flex items-center gap-2', isDark ? 'text-white/80' : 'text-slate-600']">
+          <span v-html="icon('checkCircle', 18)"></span>
+          已抵達 {{ destCityName }}！以下是接下來 24 小時的建議：
+        </p>
+        <div class="space-y-2 max-h-64 overflow-y-auto">
+          <div v-for="(tip, i) in arrivedTips" :key="i"
+            :class="['rounded-2xl p-3 text-xs', isDark ? 'bg-white/8 border border-white/10' : 'bg-white/50 border border-white/30']">
+            <p :class="['font-medium text-xs mb-0.5', isDark ? 'text-white/90' : 'text-slate-700']">{{ tip.time }}</p>
+            <p :class="isDark ? 'text-white/70' : 'text-slate-600'">{{ tip.text }}</p>
+          </div>
+        </div>
+        <button @click="clearTrip" class="mt-4 w-full lg-btn lg-btn-ghost">
+          開始新航程
+        </button>
+      </div>
+    </div>
+
+    <!-- Advice cards -->
+    <div v-if="destTz && Math.abs(timeDiffHours) > 0" class="mb-4 space-y-3">
+      <div v-for="advice in currentAdviceList" :key="advice.id"
+        :class="['rounded-3xl p-4 lg-glass fade-in', advice.urgent ? 'border-amber-400/40' : '']">
+        <div class="flex items-start gap-3">
+          <span :class="['flex-shrink-0 mt-0.5', isDark ? 'text-white/90' : 'text-slate-700']" v-html="icon(advice.icon, 22)"></span>
+          <div>
+            <p :class="['text-sm font-semibold', isDark ? 'text-white' : 'text-slate-800']">{{ advice.title }}</p>
+            <p :class="['text-xs mt-1 leading-relaxed', isDark ? 'text-white/70' : 'text-slate-600']">{{ advice.text }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Severity card -->
+    <div v-if="destTz && Math.abs(timeDiffHours) > 1" class="rounded-3xl p-4 lg-glass mb-4">
+      <div class="flex items-center justify-between mb-2">
+        <p :class="['text-sm font-semibold', isDark ? 'text-white/80' : 'text-slate-700']">預估適應時間</p>
+        <span :class="['lg-pill', severity === 'mild' ? 'success' : severity === 'moderate' ? 'warning' : 'danger']">
+          {{ severityLabel }}
+        </span>
+      </div>
+      <p :class="['text-xs leading-relaxed', isDark ? 'text-white/70' : 'text-slate-600']">{{ severityText }}</p>
+      <div class="mt-3 flex gap-1">
+        <div v-for="n in adaptDays" :key="n"
+          :class="['flex-1 h-1.5 rounded-full',
+            n <= 2 ? 'bg-green-400/60' : n <= 4 ? 'bg-yellow-400/60' : 'bg-indigo-400/60']"></div>
+      </div>
+      <p :class="['text-xs mt-1.5 text-right', isDark ? 'text-white/40' : 'text-slate-400']">約需 {{ adaptDays }} 天完全適應</p>
+    </div>
+
+    <!-- Disclaimer -->
+    <div v-if="destTz" :class="['rounded-2xl p-3 mb-4 text-xs', isDark ? 'bg-white/5 text-white/40' : 'bg-slate-100/80 text-slate-400']">
+      <p>本建議基於一般健康成人的時差醫學研究，不構成醫療建議。特殊健康狀況（癲癇、躁鬱症、糖尿病）或使用特定藥物者，服用褪黑激素前請諮詢醫師。</p>
+    </div>
+
+    <!-- Empty state -->
+    <div v-if="!destTz" class="text-center py-8">
+      <div :class="['flex items-center justify-center mb-4 opacity-40', isDark ? 'text-white' : 'text-slate-500']" v-html="icon('globe', 56)"></div>
+      <p :class="['text-base font-medium', isDark ? 'text-white/80' : 'text-slate-600']">設定目的地開始使用</p>
+      <p :class="['text-sm mt-1', isDark ? 'text-white/50' : 'text-slate-400']">在上方搜尋你的目的地城市</p>
+    </div>
+
+    <!-- iOS Install hint -->
+    <div v-if="showIOSHint" class="rounded-3xl p-4 lg-glass mb-4 text-center">
+      <p :class="['text-sm font-medium mb-1 flex items-center justify-center gap-2', isDark ? 'text-white' : 'text-slate-800']">
+        <span v-html="icon('smartphone', 16)"></span> 加入主畫面，離線使用
+      </p>
+      <p :class="['text-xs', isDark ? 'text-white/60' : 'text-slate-500']">點擊 Safari 底部「分享」按鈕 → 「加入主畫面」</p>
+      <button @click="showIOSHint = false" :class="['mt-2 text-xs opacity-50 hover:opacity-80 transition-opacity', isDark ? 'text-white' : 'text-slate-600']">不再顯示</button>
+    </div>
+
+    <!-- Chrome install button -->
+    <div v-if="deferredPrompt" class="mb-4">
+      <button @click="installPWA" class="w-full lg-btn lg-btn-primary gap-2">
+        <span v-html="icon('smartphone', 18)"></span> 安裝 App 到主畫面
+      </button>
+    </div>
+
+    <div class="safe-bottom h-4"></div>
+  </div>
+
+  <!-- Settings Drawer -->
+  <transition name="sheet">
+    <div v-if="showSettings" class="fixed inset-0 z-40">
+      <div class="lg-overlay" @click="showSettings = false"></div>
+      <div class="lg-sheet slide-up">
+        <div class="lg-sheet-handle"></div>
+        <h2 :class="['text-lg font-semibold mb-5', isDark ? 'text-white' : 'text-slate-800']">設定</h2>
+
+        <div class="space-y-5">
+          <div>
+            <label :class="['text-sm font-medium block mb-2', isDark ? 'text-white/80' : 'text-slate-700']">
+              慣常起床時間（目的地）
+            </label>
+            <input type="time" v-model="settings.wakeTime" @change="saveSettings"
+              :class="['lg-input', isDark ? 'text-white' : 'text-slate-800']">
+            <p :class="['text-xs mt-1', isDark ? 'text-white/50' : 'text-slate-400']">
+              體溫最低點（CBTmin）= 起床前 2 小時（{{ cbTminTime }}）
+            </p>
+          </div>
+          <div>
+            <label :class="['text-sm font-medium block mb-2', isDark ? 'text-white/80' : 'text-slate-700']">
+              慣常就寢時間（目的地）
+            </label>
+            <input type="time" v-model="settings.sleepTime" @change="saveSettings"
+              :class="['lg-input', isDark ? 'text-white' : 'text-slate-800']">
+          </div>
+        </div>
+
+        <div :class="['mt-6 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200/60']">
+          <p :class="['text-xs', isDark ? 'text-white/40' : 'text-slate-400']">
+            LocalStorage 儲存設定。不收集任何個人資料，所有運算在裝置本地執行。
+          </p>
+        </div>
+        <div class="safe-bottom h-4"></div>
+      </div>
+    </div>
+  </transition>
+
+  <!-- Knowledge Drawer -->
+  <transition name="sheet">
+    <div v-if="showKnowledge" class="fixed inset-0 z-40">
+      <div class="lg-overlay" @click="showKnowledge = false"></div>
+      <div class="lg-sheet slide-up" style="max-height: 85vh;">
+        <div class="lg-sheet-handle"></div>
+        <h2 :class="['text-lg font-semibold mb-2', isDark ? 'text-white' : 'text-slate-800']">時差醫學知識</h2>
+        <p :class="['text-xs mb-5', isDark ? 'text-white/50' : 'text-slate-400']">基於 2025 年最新研究</p>
+
+        <div class="space-y-4">
+          <div v-for="k in knowledgeList" :key="k.title"
+            :class="['rounded-2xl p-4', isDark ? 'bg-white/8 border border-white/10' : 'bg-white/60 border border-white/40']">
+            <p :class="['text-sm font-semibold mb-2 flex items-center gap-2', isDark ? 'text-white' : 'text-slate-800']">
+              <span v-html="icon(k.icon, 16)"></span> {{ k.title }}
+            </p>
+            <p :class="['text-xs leading-relaxed', isDark ? 'text-white/70' : 'text-slate-600']">{{ k.text }}</p>
+          </div>
+        </div>
+
+        <div :class="['mt-5 rounded-2xl p-3 text-xs flex items-start gap-2', isDark ? 'bg-amber-400/10 text-amber-200' : 'bg-amber-50 text-amber-800']">
+          <span v-html="icon('alertTriangle', 14)" class="flex-shrink-0 mt-0.5"></span>
+          <span>本資訊僅供參考，不構成醫療建議。有疑慮請諮詢醫師。</span>
+        </div>
+        <div class="safe-bottom h-4"></div>
+      </div>
+    </div>
+  </transition>
+
+  <!-- Arrival confirmation dialog -->
+  <transition name="fade">
+    <div v-if="showArrivalDialog" class="fixed inset-0 z-50 flex items-end justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" @click="snoozeArrival"></div>
+      <div class="relative w-full max-w-md rounded-3xl lg-glass p-6 slide-up">
+        <p :class="['text-lg font-semibold mb-2 flex items-center gap-2', isDark ? 'text-white' : 'text-slate-800']">
+          <span v-html="icon('plane', 20)"></span> 已抵達目的地？
+        </p>
+        <p :class="['text-sm mb-5', isDark ? 'text-white/70' : 'text-slate-600']">
+          您應已抵達 {{ destCityName }}，是否進入到達後模式？
+        </p>
+        <div class="grid grid-cols-2 gap-3">
+          <button @click="snoozeArrival" class="lg-btn lg-btn-secondary w-full py-3">
+            尚未抵達
+          </button>
+          <button @click="confirmArrival" class="lg-btn lg-btn-primary w-full py-3">
+            是，已抵達！
+          </button>
+        </div>
+        <div class="safe-bottom h-2"></div>
+      </div>
+    </div>
+  </transition>
+
+</div>
+
+<script>
+// ── Lucide SVG Icons ──────────────────────────────────────────────────────────
+const ICONS = {
+  bookOpen:      '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  settings:      '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  moon:          '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  sun:           '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  sunrise:       '<path d="M12 2v8"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m8 6 4-4 4 4"/><path d="M16 18a4 4 0 0 0-8 0"/>',
+  sunset:        '<path d="M12 10V2"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m16 6-4 4-4-4"/><path d="M16 18a4 4 0 0 0-8 0"/>',
+  plane:         '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
+  flag:          '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+  pill:          '<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>',
+  coffee:        '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/>',
+  utensils:      '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+  activity:      '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  zap:           '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  globe:         '<circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>',
+  smartphone:    '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
+  checkCircle:   '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  alertTriangle: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  refreshCw:     '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  check:         '<path d="M20 6 9 17l-5-5"/>',
+  x:             '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  chevronDown:   '<path d="m6 9 6 6 6-6"/>',
+  clock:         '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  mapPin:        '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+};
+
+const icon = (name, size = 20) =>
+  `<svg class="lg-icon" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+
+// ── Cities data ──────────────────────────────────────────────────────────────
+const CITIES = [
+  // Asia - East
+  {en:'Tokyo',zh:'東京',country:'Japan',countryZh:'日本',tz:'Asia/Tokyo',iata:'NRT'},
+  {en:'Osaka',zh:'大阪',country:'Japan',countryZh:'日本',tz:'Asia/Tokyo',iata:'KIX'},
+  {en:'Kyoto',zh:'京都',country:'Japan',countryZh:'日本',tz:'Asia/Tokyo',iata:'ITM'},
+  {en:'Sapporo',zh:'札幌',country:'Japan',countryZh:'日本',tz:'Asia/Tokyo',iata:'CTS'},
+  {en:'Fukuoka',zh:'福岡',country:'Japan',countryZh:'日本',tz:'Asia/Tokyo',iata:'FUK'},
+  {en:'Seoul',zh:'首爾',country:'South Korea',countryZh:'韓國',tz:'Asia/Seoul',iata:'ICN'},
+  {en:'Busan',zh:'釜山',country:'South Korea',countryZh:'韓國',tz:'Asia/Seoul',iata:'PUS'},
+  {en:'Taipei',zh:'台北',country:'Taiwan',countryZh:'台灣',tz:'Asia/Taipei',iata:'TPE'},
+  {en:'Kaohsiung',zh:'高雄',country:'Taiwan',countryZh:'台灣',tz:'Asia/Taipei',iata:'KHH'},
+  {en:'Beijing',zh:'北京',country:'China',countryZh:'中國',tz:'Asia/Shanghai',iata:'PEK'},
+  {en:'Shanghai',zh:'上海',country:'China',countryZh:'中國',tz:'Asia/Shanghai',iata:'PVG'},
+  {en:'Guangzhou',zh:'廣州',country:'China',countryZh:'中國',tz:'Asia/Shanghai',iata:'CAN'},
+  {en:'Shenzhen',zh:'深圳',country:'China',countryZh:'中國',tz:'Asia/Shanghai',iata:'SZX'},
+  {en:'Chengdu',zh:'成都',country:'China',countryZh:'中國',tz:'Asia/Shanghai',iata:'CTU'},
+  {en:'Hong Kong',zh:'香港',country:'Hong Kong',countryZh:'香港',tz:'Asia/Hong_Kong',iata:'HKG'},
+  {en:'Macau',zh:'澳門',country:'Macau',countryZh:'澳門',tz:'Asia/Macau',iata:'MFM'},
+  {en:'Ulaanbaatar',zh:'烏蘭巴托',country:'Mongolia',countryZh:'蒙古',tz:'Asia/Ulaanbaatar',iata:'ULN'},
+  // Asia - Southeast
+  {en:'Singapore',zh:'新加坡',country:'Singapore',countryZh:'新加坡',tz:'Asia/Singapore',iata:'SIN'},
+  {en:'Kuala Lumpur',zh:'吉隆坡',country:'Malaysia',countryZh:'馬來西亞',tz:'Asia/Kuala_Lumpur',iata:'KUL'},
+  {en:'Bangkok',zh:'曼谷',country:'Thailand',countryZh:'泰國',tz:'Asia/Bangkok',iata:'BKK'},
+  {en:'Chiang Mai',zh:'清邁',country:'Thailand',countryZh:'泰國',tz:'Asia/Bangkok',iata:'CNX'},
+  {en:'Phuket',zh:'普吉島',country:'Thailand',countryZh:'泰國',tz:'Asia/Bangkok',iata:'HKT'},
+  {en:'Jakarta',zh:'雅加達',country:'Indonesia',countryZh:'印尼',tz:'Asia/Jakarta',iata:'CGK'},
+  {en:'Bali',zh:'峇里島',country:'Indonesia',countryZh:'印尼',tz:'Asia/Makassar',iata:'DPS'},
+  {en:'Manila',zh:'馬尼拉',country:'Philippines',countryZh:'菲律賓',tz:'Asia/Manila',iata:'MNL'},
+  {en:'Cebu',zh:'宿霧',country:'Philippines',countryZh:'菲律賓',tz:'Asia/Manila',iata:'CEB'},
+  {en:'Ho Chi Minh City',zh:'胡志明市',country:'Vietnam',countryZh:'越南',tz:'Asia/Ho_Chi_Minh',iata:'SGN'},
+  {en:'Hanoi',zh:'河內',country:'Vietnam',countryZh:'越南',tz:'Asia/Bangkok',iata:'HAN'},
+  {en:'Phnom Penh',zh:'金邊',country:'Cambodia',countryZh:'柬埔寨',tz:'Asia/Phnom_Penh',iata:'PNH'},
+  {en:'Vientiane',zh:'永珍',country:'Laos',countryZh:'寮國',tz:'Asia/Vientiane',iata:'VTE'},
+  {en:'Yangon',zh:'仰光',country:'Myanmar',countryZh:'緬甸',tz:'Asia/Rangoon',iata:'RGN'},
+  {en:'Naypyidaw',zh:'奈比多',country:'Myanmar',countryZh:'緬甸',tz:'Asia/Rangoon',iata:'NYT'},
+  {en:'Brunei',zh:'汶萊',country:'Brunei',countryZh:'汶萊',tz:'Asia/Brunei',iata:'BWN'},
+  // Asia - South
+  {en:'Delhi',zh:'德里',country:'India',countryZh:'印度',tz:'Asia/Kolkata',iata:'DEL'},
+  {en:'Mumbai',zh:'孟買',country:'India',countryZh:'印度',tz:'Asia/Kolkata',iata:'BOM'},
+  {en:'Bangalore',zh:'班加羅爾',country:'India',countryZh:'印度',tz:'Asia/Kolkata',iata:'BLR'},
+  {en:'Chennai',zh:'清奈',country:'India',countryZh:'印度',tz:'Asia/Kolkata',iata:'MAA'},
+  {en:'Kolkata',zh:'加爾各答',country:'India',countryZh:'印度',tz:'Asia/Kolkata',iata:'CCU'},
+  {en:'Hyderabad',zh:'海德拉巴',country:'India',countryZh:'印度',tz:'Asia/Kolkata',iata:'HYD'},
+  {en:'Colombo',zh:'可倫坡',country:'Sri Lanka',countryZh:'斯里蘭卡',tz:'Asia/Colombo',iata:'CMB'},
+  {en:'Dhaka',zh:'達卡',country:'Bangladesh',countryZh:'孟加拉',tz:'Asia/Dhaka',iata:'DAC'},
+  {en:'Kathmandu',zh:'加德滿都',country:'Nepal',countryZh:'尼泊爾',tz:'Asia/Kathmandu',iata:'KTM'},
+  {en:'Karachi',zh:'喀拉蚩',country:'Pakistan',countryZh:'巴基斯坦',tz:'Asia/Karachi',iata:'KHI'},
+  {en:'Islamabad',zh:'伊斯蘭馬巴德',country:'Pakistan',countryZh:'巴基斯坦',tz:'Asia/Karachi',iata:'ISB'},
+  {en:'Lahore',zh:'拉合爾',country:'Pakistan',countryZh:'巴基斯坦',tz:'Asia/Karachi',iata:'LHE'},
+  // Asia - Central & West
+  {en:'Dubai',zh:'杜拜',country:'UAE',countryZh:'阿聯酋',tz:'Asia/Dubai',iata:'DXB'},
+  {en:'Abu Dhabi',zh:'阿布達比',country:'UAE',countryZh:'阿聯酋',tz:'Asia/Dubai',iata:'AUH'},
+  {en:'Doha',zh:'多哈',country:'Qatar',countryZh:'卡達',tz:'Asia/Qatar',iata:'DOH'},
+  {en:'Riyadh',zh:'利雅德',country:'Saudi Arabia',countryZh:'沙烏地阿拉伯',tz:'Asia/Riyadh',iata:'RUH'},
+  {en:'Jeddah',zh:'吉達',country:'Saudi Arabia',countryZh:'沙烏地阿拉伯',tz:'Asia/Riyadh',iata:'JED'},
+  {en:'Kuwait City',zh:'科威特市',country:'Kuwait',countryZh:'科威特',tz:'Asia/Kuwait',iata:'KWI'},
+  {en:'Muscat',zh:'馬斯喀特',country:'Oman',countryZh:'阿曼',tz:'Asia/Muscat',iata:'MCT'},
+  {en:'Manama',zh:'麥納麥',country:'Bahrain',countryZh:'巴林',tz:'Asia/Bahrain',iata:'BAH'},
+  {en:'Amman',zh:'安曼',country:'Jordan',countryZh:'約旦',tz:'Asia/Amman',iata:'AMM'},
+  {en:'Beirut',zh:'貝魯特',country:'Lebanon',countryZh:'黎巴嫩',tz:'Asia/Beirut',iata:'BEY'},
+  {en:'Tel Aviv',zh:'特拉維夫',country:'Israel',countryZh:'以色列',tz:'Asia/Jerusalem',iata:'TLV'},
+  {en:'Jerusalem',zh:'耶路撒冷',country:'Israel',countryZh:'以色列',tz:'Asia/Jerusalem',iata:'TLV'},
+  {en:'Istanbul',zh:'伊斯坦堡',country:'Turkey',countryZh:'土耳其',tz:'Europe/Istanbul',iata:'IST'},
+  {en:'Ankara',zh:'安卡拉',country:'Turkey',countryZh:'土耳其',tz:'Europe/Istanbul',iata:'ESB'},
+  {en:'Tehran',zh:'德黑蘭',country:'Iran',countryZh:'伊朗',tz:'Asia/Tehran',iata:'IKA'},
+  {en:'Baghdad',zh:'巴格達',country:'Iraq',countryZh:'伊拉克',tz:'Asia/Baghdad',iata:'BGW'},
+  {en:'Kabul',zh:'喀布爾',country:'Afghanistan',countryZh:'阿富汗',tz:'Asia/Kabul',iata:'KBL'},
+  {en:'Tashkent',zh:'塔什干',country:'Uzbekistan',countryZh:'烏茲別克',tz:'Asia/Tashkent',iata:'TAS'},
+  {en:'Almaty',zh:'阿拉木圖',country:'Kazakhstan',countryZh:'哈薩克',tz:'Asia/Almaty',iata:'ALA'},
+  {en:'Bishkek',zh:'比什凱克',country:'Kyrgyzstan',countryZh:'吉爾吉斯',tz:'Asia/Bishkek',iata:'FRU'},
+  // Europe
+  {en:'London',zh:'倫敦',country:'UK',countryZh:'英國',tz:'Europe/London',iata:'LHR'},
+  {en:'Edinburgh',zh:'愛丁堡',country:'UK',countryZh:'英國',tz:'Europe/London',iata:'EDI'},
+  {en:'Manchester',zh:'曼徹斯特',country:'UK',countryZh:'英國',tz:'Europe/London',iata:'MAN'},
+  {en:'Dublin',zh:'都柏林',country:'Ireland',countryZh:'愛爾蘭',tz:'Europe/Dublin',iata:'DUB'},
+  {en:'Paris',zh:'巴黎',country:'France',countryZh:'法國',tz:'Europe/Paris',iata:'CDG'},
+  {en:'Nice',zh:'尼斯',country:'France',countryZh:'法國',tz:'Europe/Paris',iata:'NCE'},
+  {en:'Lyon',zh:'里昂',country:'France',countryZh:'法國',tz:'Europe/Paris',iata:'LYS'},
+  {en:'Tahiti',zh:'大溪地',country:'French Polynesia',countryZh:'法屬波利尼西亞',tz:'Pacific/Tahiti',iata:'PPT'},
+  {en:'Berlin',zh:'柏林',country:'Germany',countryZh:'德國',tz:'Europe/Berlin',iata:'BER'},
+  {en:'Frankfurt',zh:'法蘭克福',country:'Germany',countryZh:'德國',tz:'Europe/Berlin',iata:'FRA'},
+  {en:'Munich',zh:'慕尼黑',country:'Germany',countryZh:'德國',tz:'Europe/Berlin',iata:'MUC'},
+  {en:'Hamburg',zh:'漢堡',country:'Germany',countryZh:'德國',tz:'Europe/Berlin',iata:'HAM'},
+  {en:'Amsterdam',zh:'阿姆斯特丹',country:'Netherlands',countryZh:'荷蘭',tz:'Europe/Amsterdam',iata:'AMS'},
+  {en:'Brussels',zh:'布魯塞爾',country:'Belgium',countryZh:'比利時',tz:'Europe/Brussels',iata:'BRU'},
+  {en:'Zurich',zh:'蘇黎世',country:'Switzerland',countryZh:'瑞士',tz:'Europe/Zurich',iata:'ZRH'},
+  {en:'Geneva',zh:'日內瓦',country:'Switzerland',countryZh:'瑞士',tz:'Europe/Zurich',iata:'GVA'},
+  {en:'Vienna',zh:'維也納',country:'Austria',countryZh:'奧地利',tz:'Europe/Vienna',iata:'VIE'},
+  {en:'Rome',zh:'羅馬',country:'Italy',countryZh:'義大利',tz:'Europe/Rome',iata:'FCO'},
+  {en:'Milan',zh:'米蘭',country:'Italy',countryZh:'義大利',tz:'Europe/Rome',iata:'MXP'},
+  {en:'Venice',zh:'威尼斯',country:'Italy',countryZh:'義大利',tz:'Europe/Rome',iata:'VCE'},
+  {en:'Florence',zh:'佛羅倫斯',country:'Italy',countryZh:'義大利',tz:'Europe/Rome',iata:'FLR'},
+  {en:'Madrid',zh:'馬德里',country:'Spain',countryZh:'西班牙',tz:'Europe/Madrid',iata:'MAD'},
+  {en:'Barcelona',zh:'巴塞隆納',country:'Spain',countryZh:'西班牙',tz:'Europe/Madrid',iata:'BCN'},
+  {en:'Lisbon',zh:'里斯本',country:'Portugal',countryZh:'葡萄牙',tz:'Europe/Lisbon',iata:'LIS'},
+  {en:'Athens',zh:'雅典',country:'Greece',countryZh:'希臘',tz:'Europe/Athens',iata:'ATH'},
+  {en:'Prague',zh:'布拉格',country:'Czech Republic',countryZh:'捷克',tz:'Europe/Prague',iata:'PRG'},
+  {en:'Budapest',zh:'布達佩斯',country:'Hungary',countryZh:'匈牙利',tz:'Europe/Budapest',iata:'BUD'},
+  {en:'Warsaw',zh:'華沙',country:'Poland',countryZh:'波蘭',tz:'Europe/Warsaw',iata:'WAW'},
+  {en:'Krakow',zh:'克拉科夫',country:'Poland',countryZh:'波蘭',tz:'Europe/Warsaw',iata:'KRK'},
+  {en:'Stockholm',zh:'斯德哥爾摩',country:'Sweden',countryZh:'瑞典',tz:'Europe/Stockholm',iata:'ARN'},
+  {en:'Oslo',zh:'奧斯陸',country:'Norway',countryZh:'挪威',tz:'Europe/Oslo',iata:'OSL'},
+  {en:'Copenhagen',zh:'哥本哈根',country:'Denmark',countryZh:'丹麥',tz:'Europe/Copenhagen',iata:'CPH'},
+  {en:'Helsinki',zh:'赫爾辛基',country:'Finland',countryZh:'芬蘭',tz:'Europe/Helsinki',iata:'HEL'},
+  {en:'Reykjavik',zh:'雷克雅維克',country:'Iceland',countryZh:'冰島',tz:'Atlantic/Reykjavik',iata:'KEF'},
+  {en:'Bucharest',zh:'布加勒斯特',country:'Romania',countryZh:'羅馬尼亞',tz:'Europe/Bucharest',iata:'OTP'},
+  {en:'Sofia',zh:'索菲亞',country:'Bulgaria',countryZh:'保加利亞',tz:'Europe/Sofia',iata:'SOF'},
+  {en:'Belgrade',zh:'貝爾格勒',country:'Serbia',countryZh:'塞爾維亞',tz:'Europe/Belgrade',iata:'BEG'},
+  {en:'Zagreb',zh:'薩格勒布',country:'Croatia',countryZh:'克羅埃西亞',tz:'Europe/Zagreb',iata:'ZAG'},
+  {en:'Ljubljana',zh:'盧布爾雅那',country:'Slovenia',countryZh:'斯洛維尼亞',tz:'Europe/Ljubljana',iata:'LJU'},
+  {en:'Moscow',zh:'莫斯科',country:'Russia',countryZh:'俄羅斯',tz:'Europe/Moscow',iata:'SVO'},
+  {en:'St. Petersburg',zh:'聖彼得堡',country:'Russia',countryZh:'俄羅斯',tz:'Europe/Moscow',iata:'LED'},
+  {en:'Vladivostok',zh:'海參崴',country:'Russia',countryZh:'俄羅斯',tz:'Asia/Vladivostok',iata:'VVO'},
+  {en:'Kyiv',zh:'基輔',country:'Ukraine',countryZh:'烏克蘭',tz:'Europe/Kiev',iata:'KBP'},
+  // Americas - North
+  {en:'New York',zh:'紐約',country:'USA',countryZh:'美國',tz:'America/New_York',iata:'JFK'},
+  {en:'Boston',zh:'波士頓',country:'USA',countryZh:'美國',tz:'America/New_York',iata:'BOS'},
+  {en:'Washington DC',zh:'華盛頓特區',country:'USA',countryZh:'美國',tz:'America/New_York',iata:'IAD'},
+  {en:'Miami',zh:'邁阿密',country:'USA',countryZh:'美國',tz:'America/New_York',iata:'MIA'},
+  {en:'Atlanta',zh:'亞特蘭大',country:'USA',countryZh:'美國',tz:'America/New_York',iata:'ATL'},
+  {en:'Philadelphia',zh:'費城',country:'USA',countryZh:'美國',tz:'America/New_York',iata:'PHL'},
+  {en:'Chicago',zh:'芝加哥',country:'USA',countryZh:'美國',tz:'America/Chicago',iata:'ORD'},
+  {en:'Dallas',zh:'達拉斯',country:'USA',countryZh:'美國',tz:'America/Chicago',iata:'DFW'},
+  {en:'Houston',zh:'休士頓',country:'USA',countryZh:'美國',tz:'America/Chicago',iata:'IAH'},
+  {en:'Minneapolis',zh:'明尼阿波利斯',country:'USA',countryZh:'美國',tz:'America/Chicago',iata:'MSP'},
+  {en:'New Orleans',zh:'紐奧良',country:'USA',countryZh:'美國',tz:'America/Chicago',iata:'MSY'},
+  {en:'Denver',zh:'丹佛',country:'USA',countryZh:'美國',tz:'America/Denver',iata:'DEN'},
+  {en:'Salt Lake City',zh:'鹽湖城',country:'USA',countryZh:'美國',tz:'America/Denver',iata:'SLC'},
+  {en:'Phoenix',zh:'鳳凰城',country:'USA',countryZh:'美國',tz:'America/Phoenix',iata:'PHX'},
+  {en:'Los Angeles',zh:'洛杉磯',country:'USA',countryZh:'美國',tz:'America/Los_Angeles',iata:'LAX'},
+  {en:'San Francisco',zh:'舊金山',country:'USA',countryZh:'美國',tz:'America/Los_Angeles',iata:'SFO'},
+  {en:'Seattle',zh:'西雅圖',country:'USA',countryZh:'美國',tz:'America/Los_Angeles',iata:'SEA'},
+  {en:'Las Vegas',zh:'拉斯維加斯',country:'USA',countryZh:'美國',tz:'America/Los_Angeles',iata:'LAS'},
+  {en:'San Diego',zh:'聖地牙哥',country:'USA',countryZh:'美國',tz:'America/Los_Angeles',iata:'SAN'},
+  {en:'Portland',zh:'波特蘭',country:'USA',countryZh:'美國',tz:'America/Los_Angeles',iata:'PDX'},
+  {en:'Honolulu',zh:'火奴魯魯',country:'USA',countryZh:'美國',tz:'Pacific/Honolulu',iata:'HNL'},
+  {en:'Anchorage',zh:'安克拉治',country:'USA',countryZh:'美國',tz:'America/Anchorage',iata:'ANC'},
+  {en:'Toronto',zh:'多倫多',country:'Canada',countryZh:'加拿大',tz:'America/Toronto',iata:'YYZ'},
+  {en:'Montreal',zh:'蒙特婁',country:'Canada',countryZh:'加拿大',tz:'America/Toronto',iata:'YUL'},
+  {en:'Ottawa',zh:'渥太華',country:'Canada',countryZh:'加拿大',tz:'America/Toronto',iata:'YOW'},
+  {en:'Vancouver',zh:'溫哥華',country:'Canada',countryZh:'加拿大',tz:'America/Vancouver',iata:'YVR'},
+  {en:'Calgary',zh:'卡加利',country:'Canada',countryZh:'加拿大',tz:'America/Edmonton',iata:'YYC'},
+  {en:'Mexico City',zh:'墨西哥市',country:'Mexico',countryZh:'墨西哥',tz:'America/Mexico_City',iata:'MEX'},
+  {en:'Cancun',zh:'坎昆',country:'Mexico',countryZh:'墨西哥',tz:'America/Cancun',iata:'CUN'},
+  {en:'Guadalajara',zh:'瓜達拉哈拉',country:'Mexico',countryZh:'墨西哥',tz:'America/Mexico_City',iata:'GDL'},
+  // Americas - Central & Caribbean
+  {en:'Havana',zh:'哈瓦那',country:'Cuba',countryZh:'古巴',tz:'America/Havana',iata:'HAV'},
+  {en:'Panama City',zh:'巴拿馬市',country:'Panama',countryZh:'巴拿馬',tz:'America/Panama',iata:'PTY'},
+  {en:'San Jose',zh:'聖荷西',country:'Costa Rica',countryZh:'哥斯大黎加',tz:'America/Costa_Rica',iata:'SJO'},
+  // Americas - South
+  {en:'Bogota',zh:'波哥大',country:'Colombia',countryZh:'哥倫比亞',tz:'America/Bogota',iata:'BOG'},
+  {en:'Lima',zh:'利馬',country:'Peru',countryZh:'秘魯',tz:'America/Lima',iata:'LIM'},
+  {en:'Quito',zh:'基多',country:'Ecuador',countryZh:'厄瓜多',tz:'America/Guayaquil',iata:'UIO'},
+  {en:'Santiago',zh:'聖地牙哥',country:'Chile',countryZh:'智利',tz:'America/Santiago',iata:'SCL'},
+  {en:'Buenos Aires',zh:'布宜諾斯艾利斯',country:'Argentina',countryZh:'阿根廷',tz:'America/Argentina/Buenos_Aires',iata:'EZE'},
+  {en:'Sao Paulo',zh:'聖保羅',country:'Brazil',countryZh:'巴西',tz:'America/Sao_Paulo',iata:'GRU'},
+  {en:'Rio de Janeiro',zh:'里約熱內盧',country:'Brazil',countryZh:'巴西',tz:'America/Sao_Paulo',iata:'GIG'},
+  {en:'Brasilia',zh:'巴西利亞',country:'Brazil',countryZh:'巴西',tz:'America/Sao_Paulo',iata:'BSB'},
+  {en:'Caracas',zh:'卡拉卡斯',country:'Venezuela',countryZh:'委內瑞拉',tz:'America/Caracas',iata:'CCS'},
+  // Oceania
+  {en:'Sydney',zh:'雪梨',country:'Australia',countryZh:'澳洲',tz:'Australia/Sydney',iata:'SYD'},
+  {en:'Melbourne',zh:'墨爾本',country:'Australia',countryZh:'澳洲',tz:'Australia/Melbourne',iata:'MEL'},
+  {en:'Brisbane',zh:'布里斯本',country:'Australia',countryZh:'澳洲',tz:'Australia/Brisbane',iata:'BNE'},
+  {en:'Perth',zh:'伯斯',country:'Australia',countryZh:'澳洲',tz:'Australia/Perth',iata:'PER'},
+  {en:'Adelaide',zh:'阿德雷德',country:'Australia',countryZh:'澳洲',tz:'Australia/Adelaide',iata:'ADL'},
+  {en:'Darwin',zh:'達爾文',country:'Australia',countryZh:'澳洲',tz:'Australia/Darwin',iata:'DRW'},
+  {en:'Gold Coast',zh:'黃金海岸',country:'Australia',countryZh:'澳洲',tz:'Australia/Brisbane',iata:'OOL'},
+  {en:'Cairns',zh:'凱恩斯',country:'Australia',countryZh:'澳洲',tz:'Australia/Brisbane',iata:'CNS'},
+  {en:'Auckland',zh:'奧克蘭',country:'New Zealand',countryZh:'紐西蘭',tz:'Pacific/Auckland',iata:'AKL'},
+  {en:'Wellington',zh:'威靈頓',country:'New Zealand',countryZh:'紐西蘭',tz:'Pacific/Auckland',iata:'WLG'},
+  {en:'Christchurch',zh:'基督城',country:'New Zealand',countryZh:'紐西蘭',tz:'Pacific/Auckland',iata:'CHC'},
+  {en:'Suva',zh:'蘇瓦',country:'Fiji',countryZh:'斐濟',tz:'Pacific/Fiji',iata:'SUV'},
+  {en:'Guam',zh:'關島',country:'Guam',countryZh:'關島',tz:'Pacific/Guam',iata:'GUM'},
+  {en:'Port Moresby',zh:'莫雷斯比港',country:'Papua New Guinea',countryZh:'巴布亞紐幾內亞',tz:'Pacific/Port_Moresby',iata:'POM'},
+  // Africa
+  {en:'Cairo',zh:'開羅',country:'Egypt',countryZh:'埃及',tz:'Africa/Cairo',iata:'CAI'},
+  {en:'Johannesburg',zh:'約翰尼斯堡',country:'South Africa',countryZh:'南非',tz:'Africa/Johannesburg',iata:'JNB'},
+  {en:'Cape Town',zh:'開普敦',country:'South Africa',countryZh:'南非',tz:'Africa/Johannesburg',iata:'CPT'},
+  {en:'Nairobi',zh:'奈洛比',country:'Kenya',countryZh:'肯亞',tz:'Africa/Nairobi',iata:'NBO'},
+  {en:'Lagos',zh:'拉哥斯',country:'Nigeria',countryZh:'奈及利亞',tz:'Africa/Lagos',iata:'LOS'},
+  {en:'Abuja',zh:'阿布賈',country:'Nigeria',countryZh:'奈及利亞',tz:'Africa/Lagos',iata:'ABV'},
+  {en:'Casablanca',zh:'卡薩布蘭卡',country:'Morocco',countryZh:'摩洛哥',tz:'Africa/Casablanca',iata:'CMN'},
+  {en:'Marrakech',zh:'馬拉喀什',country:'Morocco',countryZh:'摩洛哥',tz:'Africa/Casablanca',iata:'RAK'},
+  {en:'Tunis',zh:'突尼斯',country:'Tunisia',countryZh:'突尼西亞',tz:'Africa/Tunis',iata:'TUN'},
+  {en:'Algiers',zh:'阿爾及爾',country:'Algeria',countryZh:'阿爾及利亞',tz:'Africa/Algiers',iata:'ALG'},
+  {en:'Accra',zh:'阿克拉',country:'Ghana',countryZh:'迦納',tz:'Africa/Accra',iata:'ACC'},
+  {en:'Addis Ababa',zh:'阿迪斯阿貝巴',country:'Ethiopia',countryZh:'衣索比亞',tz:'Africa/Addis_Ababa',iata:'ADD'},
+  {en:'Dar es Salaam',zh:'三蘭港',country:'Tanzania',countryZh:'坦尚尼亞',tz:'Africa/Dar_es_Salaam',iata:'DAR'},
+  {en:'Kampala',zh:'坎帕拉',country:'Uganda',countryZh:'烏干達',tz:'Africa/Kampala',iata:'EBB'},
+  {en:'Khartoum',zh:'喀土穆',country:'Sudan',countryZh:'蘇丹',tz:'Africa/Khartoum',iata:'KRT'},
+  {en:'Dakar',zh:'達卡',country:'Senegal',countryZh:'塞內加爾',tz:'Africa/Dakar',iata:'DKR'},
+];
+
+// ── Vue App ───────────────────────────────────────────────────────────────────
+const { createApp, ref, computed, onMounted, onUnmounted, watch } = Vue;
+
+createApp({
+  setup() {
+    // ── State ───────────────────────────────────────────────────────────────
+    const originTz = ref('');
+    const destTz   = ref('');
+    const originSearch = ref('');
+    const destSearch   = ref('');
+    const originResults = ref([]);
+    const destResults   = ref([]);
+    const showOriginDrop = ref(false);
+    const showDestDrop   = ref(false);
+
+    const now = ref(new Date());
+    const settings = ref({ wakeTime: '07:00', sleepTime: '22:00' });
+
+    // Trip
+    const tripDepartStr  = ref('');
+    const tripArriveStr  = ref('');
+    const tripStatus     = ref('none'); // none | flying | arrived
+    const tripDepart     = ref(null);
+    const tripArrive     = ref(null);
+    const showArrivalDialog = ref(false);
+    const snoozedAt      = ref(null);
+
+    // UI
+    const showSettings   = ref(false);
+    const showKnowledge  = ref(false);
+    const showUpdateBanner = ref(false);
+    const showIOSHint    = ref(false);
+    const showStorageWarn = ref(false);
+    const deferredPrompt = ref(null);
+
+    // ── Timer ───────────────────────────────────────────────────────────────
+    let ticker = null;
+    const tick = () => { now.value = new Date(); };
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+    const getOffset = (tz) => {
+      try {
+        const d = new Date();
+        const parts = new Intl.DateTimeFormat('en', {
+          timeZone: tz, timeZoneName: 'shortOffset'
+        }).formatToParts(d);
+        return parts.find(p => p.type === 'timeZoneName')?.value || '';
+      } catch { return ''; }
+    };
+
+    const getHourMin = (tz, date) => {
+      const d = date || now.value;
+      const parts = new Intl.DateTimeFormat('en', {
+        timeZone: tz, hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: false
+      }).formatToParts(d);
+      const h = parseInt(parts.find(p=>p.type==='hour')?.value || 0);
+      const m = parseInt(parts.find(p=>p.type==='minute')?.value || 0);
+      const s = parseInt(parts.find(p=>p.type==='second')?.value || 0);
+      return { h, m, s };
+    };
+
+    const formatTime = (tz) => {
+      const { h, m, s } = getHourMin(tz);
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    };
+
+    const getTzLabel = (tz) => {
+      if (!tz) return '';
+      const city = CITIES.find(c => c.tz === tz);
+      return city ? city.zh : tz.split('/').pop().replace('_', ' ');
+    };
+
+    const getUtcOffsetHours = (tz) => {
+      try {
+        const d = new Date();
+        const utcMs = d.getTime();
+        const localMs = new Date(d.toLocaleString('en', { timeZone: tz })).getTime();
+        const refMs   = new Date(d.toLocaleString('en', { timeZone: 'UTC' })).getTime();
+        return Math.round((localMs - refMs) / 36e5);
+      } catch { return 0; }
+    };
+
+    const fuzzyMatch = (query, city) => {
+      const q = query.toLowerCase().trim();
+      return city.en.toLowerCase().includes(q) ||
+             city.zh.includes(q) ||
+             city.country.toLowerCase().includes(q) ||
+             city.countryZh.includes(q) ||
+             city.tz.toLowerCase().includes(q) ||
+             (city.iata && (city.iata.toLowerCase() === q || city.iata.toLowerCase().includes(q)));
+    };
+
+    // ── Computed ────────────────────────────────────────────────────────────
+    const originTime = computed(() => originTz.value ? formatTime(originTz.value) : '--:--:--');
+    const destTime   = computed(() => destTz.value ? formatTime(destTz.value) : '--:--:--');
+    const originTzLabel = computed(() => getTzLabel(originTz.value) + ' ' + getOffset(originTz.value));
+    const destTzLabel   = computed(() => getTzLabel(destTz.value) + ' ' + getOffset(destTz.value));
+    const destCityName  = computed(() => {
+      if (!destTz.value) return '';
+      const c = CITIES.find(x => x.tz === destTz.value);
+      return c ? c.zh : destTz.value;
+    });
+
+    const timeDiffHours = computed(() => {
+      if (!originTz.value || !destTz.value) return 0;
+      const diff = getUtcOffsetHours(destTz.value) - getUtcOffsetHours(originTz.value);
+      // shortest path (max 12)
+      if (diff > 12) return diff - 24;
+      if (diff < -12) return diff + 24;
+      return diff;
+    });
+
+    const flightDirection = computed(() => timeDiffHours.value >= 0 ? 'east' : 'west');
+
+    const severity = computed(() => {
+      const h = Math.abs(timeDiffHours.value);
+      if (h <= 3) return 'mild';
+      if (h <= 8) return 'moderate';
+      return 'severe';
+    });
+    const severityLabel = computed(() => ({ mild:'輕度', moderate:'中度', severe:'嚴重' }[severity.value]));
+    const adaptDays = computed(() => {
+      const h = Math.abs(timeDiffHours.value);
+      if (h <= 3) return 2;
+      const rate = flightDirection.value === 'east' ? 1 : 1.5;
+      return Math.min(Math.ceil(h / rate), 10);
+    });
+    const severityText = computed(() => {
+      const h = Math.abs(timeDiffHours.value);
+      if (h <= 3) return '時差較小，通常 1–2 天可自然適應，維持規律作息即可。';
+      const rate = flightDirection.value === 'east' ? '1' : '1.5';
+      return `${flightDirection.value === 'east' ? '向東飛較困難' : '向西飛較容易'}，生理時鐘每天約可調整 ${rate} 小時。` +
+             `建議出發前 3–5 天開始調整光照與睡眠時機。預計約需 ${adaptDays.value} 天完全適應。`;
+    });
+
+    // Destination current time components
+    const destHourMin = computed(() => {
+      if (!destTz.value) return { h: 12, m: 0 };
+      return getHourMin(destTz.value);
+    });
+    const destHourDecimal = computed(() => destHourMin.value.h + destHourMin.value.m / 60);
+
+    // Sleep window from settings
+    const sleepH = computed(() => parseInt(settings.value.sleepTime.split(':')[0]));
+    const wakeH  = computed(() => parseInt(settings.value.wakeTime.split(':')[0]));
+
+    // Time segment: sleep | dawn | awake | dusk
+    const timeSegment = computed(() => {
+      if (!destTz.value) return 'awake';
+      const h = destHourDecimal.value;
+      const sleep = sleepH.value;   // e.g. 22
+      const wake  = wakeH.value;    // e.g. 7
+      const dawnEnd  = wake + 1.5;  // 8:30
+      const duskStart = sleep - 1.5; // 20:30
+
+      const inSleep = h >= sleep || h < wake;
+      const inDawn  = h >= wake  && h < dawnEnd;
+      const inDusk  = h >= duskStart && h < sleep;
+
+      if (inSleep) return 'sleep';
+      if (inDawn)  return 'dawn';
+      if (inDusk)  return 'dusk';
+      return 'awake';
+    });
+
+    const isDark = computed(() => timeSegment.value === 'sleep' || timeSegment.value === 'dusk');
+
+    const bgClass = computed(() => ({
+      sleep: 'bg-sleep',
+      dawn:  'bg-dawn',
+      awake: 'bg-awake',
+      dusk:  'bg-dusk',
+    }[timeSegment.value]));
+
+    const statusIcon = computed(() => ({
+      sleep: 'moon', dawn: 'sunrise', awake: 'sun', dusk: 'sunset'
+    }[timeSegment.value]));
+
+    const statusTitle = computed(() => {
+      if (!destTz.value) return '設定目的地開始';
+      return {
+        sleep: '目的地現在是夜晚，應嘗試入睡',
+        dawn:  '清晨過渡時段——盡快接觸晨光',
+        awake: '保持清醒！目的地正值白天',
+        dusk:  '傍晚過渡——準備進入睡眠模式',
+      }[timeSegment.value];
+    });
+
+    const statusSubtitle = computed(() => {
+      if (!destTz.value) return '';
+      return {
+        sleep: '避免強光與藍光，可考慮使用褪黑激素',
+        dawn:  '向東飛者：清晨強光最重要。向西飛者：此時避免強光',
+        awake: '按目的地時間規律進食與活動',
+        dusk:  '逐漸降低室內光線，減少螢幕使用時間',
+      }[timeSegment.value];
+    });
+
+    // CBTmin
+    const cbTminTime = computed(() => {
+      const wakeHr = parseInt(settings.value.wakeTime.split(':')[0]);
+      const wakeMin = parseInt(settings.value.wakeTime.split(':')[1]);
+      let h = wakeHr - 2;
+      if (h < 0) h += 24;
+      return `${String(h).padStart(2,'0')}:${String(wakeMin).padStart(2,'0')}`;
+    });
+
+    const nearCBTmin = computed(() => {
+      if (!destTz.value) return false;
+      const cbH = parseInt(cbTminTime.value.split(':')[0]);
+      const cbM = parseInt(cbTminTime.value.split(':')[1]);
+      const cbDec = cbH + cbM / 60;
+      const diff = Math.abs(destHourDecimal.value - cbDec);
+      return diff < 0.5 || diff > 23.5;
+    });
+
+    const cbTminAdvice = computed(() => {
+      if (flightDirection.value === 'east') {
+        return '向東飛：CBTmin 之後接受光照可提前時鐘。現在是絕佳光照時機（若是清晨）。';
+      }
+      return '向西飛：CBTmin 之前接受光照可延後時鐘。若現在仍是夜晚，保持避光。';
+    });
+
+    // ── Advice engine ────────────────────────────────────────────────────────
+    const currentAdviceList = computed(() => {
+      if (!destTz.value) return [];
+      const h = destHourDecimal.value;
+      const dir = flightDirection.value;
+      const diffH = Math.abs(timeDiffHours.value);
+      const sleep = sleepH.value;
+      const wake  = wakeH.value;
+      const hoursToSleep = h < sleep ? sleep - h : 24 - h + sleep;
+      const list = [];
+
+      // Light advice
+      if (dir === 'east') {
+        if (h >= wake && h < wake + 3) {
+          list.push({ id:'light', icon:'sun', title:'光照建議（重要）', urgent: true,
+            text:'現在是目的地早晨，立即到戶外接受自然光 30 分鐘以上。強光曝曬是提前生理時鐘最有效的方法，效果優於任何藥物。' });
+        } else if (h >= sleep - 3) {
+          list.push({ id:'light', icon:'moon', title:'光照建議：避免強光',
+            text:'傍晚後請避免強烈光線（尤其是手機螢幕、LED 燈）。可使用暖色燈光或戴藍光眼鏡，幫助生理時鐘繼續提前。' });
+        } else {
+          list.push({ id:'light', icon:'zap', title:'光照提示',
+            text:'向東飛：早晨強光、傍晚避光是關鍵策略。目前時段可正常活動。' });
+        }
+      } else {
+        if (h >= sleep - 4 && h < sleep) {
+          list.push({ id:'light', icon:'sunset', title:'光照建議（重要）', urgent: true,
+            text:'現在是目的地傍晚，保持在明亮環境中，延遲進入黑暗。傍晚光照幫助延後生理時鐘，讓你更容易適應向西飛的時區。' });
+        } else if (h >= wake && h < wake + 2) {
+          list.push({ id:'light', icon:'sunrise', title:'光照建議：清晨避光',
+            text:'向西飛初期的清晨應避免強光（戴墨鏡或待在室內），以免阻礙時鐘延後。幾天後可逐漸提早晨光時機。' });
+        } else {
+          list.push({ id:'light', icon:'zap', title:'光照提示',
+            text:'向西飛：傍晚強光、清晨避光是關鍵。目前時段可正常活動。' });
+        }
+      }
+
+      // Sleep advice
+      if (timeSegment.value === 'sleep') {
+        list.push({ id:'sleep', icon:'moon', title:'現在應該入睡',
+          text:`目的地時間已是夜晚。如果困難入睡，可服用低劑量褪黑激素（0.5–3mg）在嘗試入睡前 30 分鐘服用。戴眼罩和耳塞有助於入睡。` });
+      } else if (timeSegment.value === 'dawn' || timeSegment.value === 'dusk') {
+        list.push({ id:'sleep', icon:'moon', title:'過渡時段：調整狀態',
+          text: timeSegment.value === 'dawn'
+            ? '清晨過渡。若前夜睡眠不足，可在上午（下午3點前）小睡最多 20 分鐘，超過會進入深層睡眠反而更昏沉。'
+            : '傍晚過渡。開始降低光線強度，減少咖啡因，讓身體逐漸進入睡眠準備模式。' });
+      } else {
+        list.push({ id:'sleep', icon:'zap', title:'保持清醒',
+          text: '這個時段應維持清醒，避免白天長睡（超過 20 分鐘）。曬太陽、輕度運動、社交活動都有助於適應當地時間。' });
+      }
+
+      // Caffeine
+      if (hoursToSleep <= 8 && hoursToSleep > 0) {
+        list.push({ id:'caffeine', icon:'coffee', title:'咖啡因注意',
+          text:`距離就寢時間約 ${Math.round(hoursToSleep)} 小時，建議停止攝取咖啡因（半衰期 3–5 小時）。過多咖啡因殘留會影響睡眠品質。` });
+      } else if (h >= wake && h < wake + 4) {
+        list.push({ id:'caffeine', icon:'coffee', title:'咖啡因策略',
+          text:'可適量攝取咖啡因幫助保持清醒。建議分次少量（每次 40–50mg）而非大量一次攝取，避免快速消退。' });
+      }
+
+      // Food
+      if (h >= wake && h < wake + 2.5) {
+        list.push({ id:'food', icon:'utensils', title:'早餐建議',
+          text:'按目的地時間規律吃早餐，以蛋白質為主（蛋、肉、豆類）。蛋白質有助提升清醒感，也是重設腸道時鐘的關鍵。避免高糖早餐。' });
+      } else if (h >= 12 && h < 14) {
+        list.push({ id:'food', icon:'utensils', title:'午餐建議',
+          text:'按目的地時間進食午餐。規律飲食比食物種類更重要——幫助腸道時鐘（peripheral clock）同步到當地時間。' });
+      } else if (h >= 18 && h < 20) {
+        list.push({ id:'food', icon:'utensils', title:'晚餐建議',
+          text:'晚餐以碳水化合物為主（飯、麵、麵包），促進色胺酸合成血清素，有助於之後的睡眠。避免大量進食，攝食過多影響睡眠品質。' });
+      }
+
+      // Exercise
+      if (dir === 'east' && h >= wake && h < wake + 3) {
+        list.push({ id:'exercise', icon:'activity', title:'清晨運動',
+          text:'在戶外進行 15–30 分鐘輕度運動（快走、慢跑）。戶外運動同時獲得光照，雙重幫助提前時鐘。強度不必高，持續性最重要。' });
+      } else if (dir === 'west' && h >= 17 && h < 20) {
+        list.push({ id:'exercise', icon:'activity', title:'傍晚運動',
+          text:'傍晚進行輕度至中度運動有助於延後生理時鐘（向西飛）。不要在睡前 2 小時內劇烈運動，否則反而影響入睡。' });
+      }
+
+      // Melatonin
+      if (timeSegment.value === 'dusk' || (timeSegment.value === 'sleep' && h < wake)) {
+        list.push({ id:'melatonin', icon:'pill', title:'褪黑激素建議',
+          text:'若需要，在預計入睡前 30–60 分鐘服用 0.5–3mg 褪黑激素。低劑量（0.5–1mg）通常與 5mg 效果相當，避免隔天殘留昏沉感。特殊族群請先諮詢醫師。' });
+      }
+
+      return list;
+    });
+
+    // ── Trip logic ───────────────────────────────────────────────────────────
+    const startTrip = () => {
+      if (!tripDepartStr.value || !tripArriveStr.value) return;
+      tripDepart.value  = new Date(tripDepartStr.value);
+      tripArrive.value  = new Date(tripArriveStr.value);
+      tripStatus.value  = now.value < tripArrive.value ? 'flying' : 'arrived';
+      saveTrip();
+    };
+
+    const clearTrip = () => {
+      tripStatus.value = 'none';
+      tripDepartStr.value = '';
+      tripArriveStr.value = '';
+      tripDepart.value = null;
+      tripArrive.value = null;
+      snoozedAt.value  = null;
+      showArrivalDialog.value = false;
+      localStorage.removeItem('jl_trip');
+    };
+
+    const resetTrip = () => {
+      clearTrip();
+      originTz.value = '';
+      destTz.value = '';
+      originSearch.value = '';
+      destSearch.value = '';
+      localStorage.removeItem('jl_settings');
+    };
+
+    const confirmArrival = () => {
+      tripStatus.value = 'arrived';
+      showArrivalDialog.value = false;
+      saveTrip();
+    };
+
+    const snoozeArrival = () => {
+      snoozedAt.value = new Date();
+      showArrivalDialog.value = false;
+    };
+
+    const countdownStr = computed(() => {
+      if (!tripArrive.value) return '--:--:--';
+      const diff = tripArrive.value - now.value;
+      if (diff <= 0) return '00:00:00';
+      const h = Math.floor(diff / 36e5);
+      const m = Math.floor((diff % 36e5) / 6e4);
+      const s = Math.floor((diff % 6e4) / 1e3);
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    });
+
+    const inflightAdvice = computed(() => {
+      if (!destTz.value) return '';
+      const seg = timeSegment.value;
+      if (seg === 'sleep') return '目的地現在是深夜，建議在機上嘗試休息。戴眼罩、頸枕、耳機隔音有助入睡。避免看螢幕。';
+      if (seg === 'dawn' || seg === 'awake') return '目的地是白天，盡量保持清醒。起身活動、補充水分，避免飲酒。下機後直接按當地時間活動。';
+      return '傍晚過渡時段。若距抵達還有 2 小時以上，可嘗試短暫休息（20 分鐘）為抵達儲備體力。';
+    });
+
+    const arrivedTips = computed(() => {
+      if (!destTz.value) return [];
+      const dir = flightDirection.value;
+      const { h } = getHourMin(destTz.value);
+      const tips = [
+        { time: '現在（抵達當下）', text: '立刻將手機 / 手錶調至當地時間。到戶外接受自然光 30 分鐘。做幾分鐘伸展。' },
+      ];
+      if (dir === 'east') {
+        tips.push({ time: '早晨（當地時間）', text: '強制在當地時間起床（設多個鬧鐘）。起床後立即外出接受晨光——這是最重要的一步。' });
+        tips.push({ time: '白天', text: '全程按當地時間進食三餐。若昏沉，可在下午 1–3 點小睡最多 20 分鐘。傍晚後避免咖啡因。' });
+        tips.push({ time: '傍晚後', text: '降低室內光線，避免強光螢幕。可服用褪黑激素 0.5–3mg，入睡前 30–60 分鐘。' });
+      } else {
+        tips.push({ time: '上午（當地時間）', text: '清晨可戴墨鏡或避免強光。按當地時間正常吃早餐。' });
+        tips.push({ time: '傍晚', text: '傍晚保持在明亮環境。進行輕度戶外運動。這個時段的光照最有助於向西飛的時鐘延後。' });
+        tips.push({ time: '夜晚', text: '若過了慣常睡眠時間仍不睏，可服用低劑量褪黑激素輔助。不要因為早醒就起床滑手機。' });
+      }
+      tips.push({ time: '接下來 2–3 天', text: `每天生理時鐘約可調整 ${dir === 'east' ? '1' : '1.5'} 小時。嚴格執行當地時間的光照、進食、運動，預計 ${adaptDays.value} 天完全適應。` });
+      tips.push({ time: '全程注意', text: '大量補水（每小時至少 250ml），避免酒精（破壞 REM 睡眠），適量咖啡因（按當地時間控制）。' });
+      return tips;
+    });
+
+    // ── Arrival detection ────────────────────────────────────────────────────
+    const checkArrival = () => {
+      if (tripStatus.value !== 'flying' || !tripArrive.value) return;
+      const overdue = now.value - tripArrive.value;
+      if (overdue < 15 * 60 * 1000) return;
+      if (snoozedAt.value && now.value - snoozedAt.value < 30 * 60 * 1000) return;
+      showArrivalDialog.value = true;
+    };
+
+    // ── Search ───────────────────────────────────────────────────────────────
+    const onOriginSearch = () => {
+      const q = originSearch.value.trim();
+      if (!q) { originResults.value = []; return; }
+      originResults.value = CITIES.filter(c => fuzzyMatch(q, c)).slice(0, 10);
+    };
+
+    const onDestSearch = () => {
+      const q = destSearch.value.trim();
+      if (!q) { destResults.value = []; return; }
+      destResults.value = CITIES.filter(c => fuzzyMatch(q, c)).slice(0, 10);
+    };
+
+    const selectOrigin = (c) => {
+      originTz.value = c.tz;
+      originSearch.value = `${c.zh} · ${c.en}`;
+      originResults.value = [];
+      showOriginDrop.value = false;
+      saveSettings();
+    };
+
+    const selectDest = (c) => {
+      destTz.value = c.tz;
+      destSearch.value = `${c.zh} · ${c.en}`;
+      destResults.value = [];
+      showDestDrop.value = false;
+      saveSettings();
+    };
+
+    const hideDrop = (which) => {
+      setTimeout(() => {
+        if (which === 'origin') showOriginDrop.value = false;
+        else showDestDrop.value = false;
+      }, 150);
+    };
+
+    // ── Persistence ──────────────────────────────────────────────────────────
+    const saveSettings = () => {
+      try {
+        localStorage.setItem('jl_settings', JSON.stringify({
+          originTz: originTz.value,
+          destTz: destTz.value,
+          originSearch: originSearch.value,
+          destSearch: destSearch.value,
+          settings: settings.value,
+        }));
+      } catch {}
+    };
+
+    const saveTrip = () => {
+      try {
+        localStorage.setItem('jl_trip', JSON.stringify({
+          tripStatus: tripStatus.value,
+          tripDepart: tripDepart.value?.toISOString(),
+          tripArrive: tripArrive.value?.toISOString(),
+          tripDepartStr: tripDepartStr.value,
+          tripArriveStr: tripArriveStr.value,
+        }));
+      } catch {}
+    };
+
+    const loadData = () => {
+      try { localStorage.setItem('_jl_test', '1'); localStorage.removeItem('_jl_test'); }
+      catch { showStorageWarn.value = true; return; }
+      try {
+        const s = localStorage.getItem('jl_settings');
+        if (s) {
+          const d = JSON.parse(s);
+          originTz.value = d.originTz || '';
+          destTz.value   = d.destTz || '';
+          originSearch.value = d.originSearch || '';
+          destSearch.value   = d.destSearch || '';
+          if (d.settings) settings.value = { ...settings.value, ...d.settings };
+        }
+        const t = localStorage.getItem('jl_trip');
+        if (t) {
+          const d = JSON.parse(t);
+          tripStatus.value    = d.tripStatus || 'none';
+          tripDepartStr.value = d.tripDepartStr || '';
+          tripArriveStr.value = d.tripArriveStr || '';
+          tripDepart.value    = d.tripDepart ? new Date(d.tripDepart) : null;
+          tripArrive.value    = d.tripArrive ? new Date(d.tripArrive) : null;
+        }
+      } catch {}
+    };
+
+    // ── PWA ──────────────────────────────────────────────────────────────────
+    const installPWA = async () => {
+      if (!deferredPrompt.value) return;
+      deferredPrompt.value.prompt();
+      await deferredPrompt.value.userChoice;
+      deferredPrompt.value = null;
+    };
+
+    const reloadApp = () => window.location.reload();
+
+    const isIOSSafari = () => {
+      const ua = navigator.userAgent;
+      return /iP(hone|ad|od)/.test(ua) && /WebKit/.test(ua) && !/CriOS|FxiOS/.test(ua);
+    };
+
+    const isStandalone = () =>
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+
+    // ── Knowledge content ────────────────────────────────────────────────────
+    const knowledgeList = [
+      { icon:'activity', title:'時差的科學原理',
+        text:'人體的生理時鐘由大腦視交叉上核（SCN）控制，週期約 24 小時。跨時區飛行使外部光線/黑暗週期與內部時鐘產生落差，形成時差。體溫最低點（CBTmin，通常在起床前 2 小時）是重置時鐘的關鍵樞紐。' },
+      { icon:'sun', title:'光線是最強的工具',
+        text:'光線是最有效的「時間校正器」（zeitgeber），效果優於任何藥物。向東飛：早晨強光、傍晚避光。向西飛：傍晚強光、清晨避光。在錯誤時機曝曬強光，反而使時差更嚴重。' },
+      { icon:'plane', title:'向東 vs 向西飛',
+        text:'向東飛（如台灣→歐洲）需要提前生理時鐘，較困難，每天約調整 1 小時。向西飛（如台灣→美西）需要延後時鐘，較容易，每天約調整 1.5 小時。人體自然週期略長於 24 小時，天生較容易延後。' },
+      { icon:'pill', title:'褪黑激素正確用法',
+        text:'褪黑激素是「黑暗信號」，不是安眠藥。建議劑量：0.5–3mg（市售 5–10mg 通常過高）。向東飛：在目的地入睡前 30–60 分鐘服用。向西飛：多數人不需要。特殊族群（癲癇、躁鬱症、糖尿病）使用前請諮詢醫師。' },
+      { icon:'coffee', title:'咖啡因策略',
+        text:'咖啡因半衰期 3–5 小時，睡前 8–10 小時應停止攝取。建議每次攝取 40–50mg（約一杯淡茶）分次少量，而非大量一次。向西飛：可略微延後每日第一杯的時間。' },
+      { icon:'utensils', title:'飲食調整',
+        text:'研究發現按目的地時區調整進食時間，可讓時差恢復縮短 1/3。抵達後第一餐很重要，嚴格按當地時間進食。早餐蛋白質為主（提升清醒感）、晚餐碳水為主（幫助入睡）。大量補水，避免酒精。' },
+      { icon:'activity', title:'運動的作用',
+        text:'運動強化生理時鐘信號。向東飛：清晨戶外運動（同時獲得晨光）。向西飛：傍晚運動（但不超過睡前 2 小時）。強度不需要高，快走 15–30 分鐘即有效。' },
+      { icon:'moon', title:'小睡的正確方式',
+        text:'抵達後若極度疲憊，可進行「策略性小睡」：限制在 15–20 分鐘（設鬧鐘），且只在當地下午 1–3 點之間。超過 20 分鐘會進入深層睡眠，醒來反而更昏沉。絕對避免長時間白天補眠。' },
+      { icon:'zap', title:'2025 年最新研究',
+        text:'Oura Ring 分析 5.7 萬名使用者發現：睡眠時長約 2 天恢復，但睡眠時機與結構（REM、深眠）可能需要超過一週完全恢復。光線＋褪黑激素組合策略效果優於單獨使用任一方式。個人化介入（依作息類型）效果最佳。' },
+    ];
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────
+    onMounted(() => {
+      // Detect timezone
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      loadData();
+      if (!originTz.value && detected) {
+        originTz.value = detected;
+        const c = CITIES.find(x => x.tz === detected);
+        if (c) originSearch.value = `${c.zh} · ${c.en}`;
+        else originSearch.value = detected;
+      }
+
+      // Start ticker
+      ticker = setInterval(() => {
+        tick();
+        checkArrival();
+      }, 1000);
+
+      // PWA
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt.value = e;
+      });
+
+      if (isIOSSafari() && !isStandalone() && !localStorage.getItem('jl_ios_hint_dismissed')) {
+        setTimeout(() => { showIOSHint.value = true; }, 3000);
+      }
+
+      // SW registration
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker?.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdateBanner.value = true;
+              }
+            });
+          });
+        });
+      }
+    });
+
+    onUnmounted(() => clearInterval(ticker));
+
+    // Watch for settings changes to save
+    watch([originTz, destTz, settings], saveSettings, { deep: true });
+    watch(showIOSHint, (v) => {
+      if (!v) localStorage.setItem('jl_ios_hint_dismissed', '1');
+    });
+
+    return {
+      originTz, destTz, originSearch, destSearch,
+      originResults, destResults, showOriginDrop, showDestDrop,
+      now, settings,
+      tripDepartStr, tripArriveStr, tripStatus, showArrivalDialog,
+      showSettings, showKnowledge, showUpdateBanner, showIOSHint, showStorageWarn, deferredPrompt,
+      originTime, destTime, originTzLabel, destTzLabel, destCityName,
+      timeDiffHours, flightDirection, severity, severityLabel, severityText, adaptDays,
+      timeSegment, isDark, bgClass,
+      statusIcon, statusTitle, statusSubtitle,
+      nearCBTmin, cbTminAdvice, cbTminTime,
+      currentAdviceList, countdownStr, inflightAdvice, arrivedTips,
+      onOriginSearch, onDestSearch, selectOrigin, selectDest, hideDrop,
+      startTrip, clearTrip, resetTrip, confirmArrival, snoozeArrival,
+      installPWA, reloadApp, getOffset, saveSettings,
+      knowledgeList, icon,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
