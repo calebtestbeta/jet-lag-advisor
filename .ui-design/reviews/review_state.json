@@ -1,0 +1,16 @@
+{
+  "review_id": "index_20260501_220427",
+  "target": "/Users/al03182532/Documents/GitHub/jet-lag-advisor/index.html",
+  "focus_areas": ["visual"],
+  "context": "Mobile PWA - Jet Lag Advisor",
+  "platform": "mobile",
+  "status": "complete",
+  "started_at": "2026-05-01T22:04:27",
+  "issues_found": 9,
+  "severity_counts": {
+    "critical": 2,
+    "major": 2,
+    "minor": 4,
+    "suggestion": 1
+  }
+}

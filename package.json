@@ -1,0 +1,12 @@
+{
+  "name": "jet-lag-advisor",
+  "private": true,
+  "scripts": {
+    "serve": "python3 -m http.server 8080",
+    "test": "cypress run --headless",
+    "test:open": "cypress open"
+  },
+  "devDependencies": {
+    "cypress": "^13.0.0"
+  }
+}

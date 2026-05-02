@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2.7.0';
+const CACHE_VERSION = 'v2.8.0';
 const CACHE_NAME = `jet-lag-advisor-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [

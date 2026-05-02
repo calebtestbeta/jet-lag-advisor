@@ -46,40 +46,10 @@
       --glass-tint-a: rgba(99,102,241,0.05);
       --glass-tint-b: rgba(244,114,182,0.03);
     }
-    /* 日間模式：目的地為白天（awake / dawn） */
-    .theme-day {
-      color-scheme: light;
-      --glass-surface: rgba(255,255,255,0.90);
-      --glass-surface-thin: rgba(255,255,255,0.70);
-      --glass-surface-thick: rgba(255,255,255,0.97);
-      --glass-border: rgba(0,0,0,0.08);
-      --glass-border-top: rgba(255,255,255,0.95);
-      --glass-shadow: rgba(0,0,0,0.08);
-      --glass-shadow-deep: rgba(0,0,0,0.18);
-      --glass-text-primary: rgba(0,0,0,0.88);
-      --glass-text-secondary: rgba(0,0,0,0.55);
-      --glass-text-tertiary: rgba(0,0,0,0.38);
-      --glass-shimmer: rgba(255,255,255,0.22);
-      --glass-tint-a: rgba(99,102,241,0.05);
-      --glass-tint-b: rgba(244,114,182,0.03);
-    }
-    /* 夜間模式：目的地為夜晚（sleep / dusk） */
-    .theme-night {
-      color-scheme: dark;
-      --glass-surface: rgba(22,24,38,0.85);
-      --glass-surface-thin: rgba(18,20,32,0.65);
-      --glass-surface-thick: rgba(16,18,28,0.95);
-      --glass-border: rgba(255,255,255,0.12);
-      --glass-border-top: rgba(255,255,255,0.20);
-      --glass-shadow: rgba(0,0,0,0.40);
-      --glass-shadow-deep: rgba(0,0,0,0.65);
-      --glass-text-primary: rgba(255,255,255,0.92);
-      --glass-text-secondary: rgba(255,255,255,0.62);
-      --glass-text-tertiary: rgba(255,255,255,0.38);
-      --glass-shimmer: rgba(255,255,255,0.16);
-      --glass-tint-a: rgba(139,92,246,0.12);
-      --glass-tint-b: rgba(216,180,254,0.06);
-    }
+    /* 日間模式：目的地為白天（awake / dawn）—— 顏色 token 由 JS applyThemeTokens() 注入 */
+    .theme-day  { color-scheme: light; }
+    /* 夜間模式：目的地為夜晚（sleep / dusk）—— 顏色 token 由 JS applyThemeTokens() 注入 */
+    .theme-night { color-scheme: dark; }
 
     /* ── Four-Layer Liquid Glass（無 backdrop-filter）────────────────────────── */
     .lg-glass {
@@ -948,7 +918,7 @@ const CITIES = [
 ];
 
 // ── Vue App ───────────────────────────────────────────────────────────────────
-const { createApp, ref, computed, onMounted, onUnmounted, watch, nextTick } = Vue;
+const { createApp, ref, computed, onMounted, onUnmounted, watch, watchEffect, nextTick } = Vue;
 
 createApp({
   setup() {
@@ -1123,6 +1093,41 @@ createApp({
     });
 
     const isDark = computed(() => timeSegment.value === 'sleep' || timeSegment.value === 'dusk');
+
+    // JS-driven token injection: inline style has highest CSS priority, bypasses all cascade issues
+    const applyThemeTokens = (dark) => {
+      const app = document.getElementById('app');
+      if (!app) return;
+      const t = dark ? {
+        '--glass-surface':       'rgba(22,24,38,0.85)',
+        '--glass-surface-thin':  'rgba(18,20,32,0.65)',
+        '--glass-border':        'rgba(255,255,255,0.12)',
+        '--glass-border-top':    'rgba(255,255,255,0.20)',
+        '--glass-shadow':        'rgba(0,0,0,0.40)',
+        '--glass-shadow-deep':   'rgba(0,0,0,0.65)',
+        '--glass-shimmer':       'rgba(255,255,255,0.16)',
+        '--glass-tint-a':        'rgba(139,92,246,0.12)',
+        '--glass-tint-b':        'rgba(216,180,254,0.06)',
+        '--glass-text-primary':  'rgba(255,255,255,0.95)',
+        '--glass-text-secondary':'rgba(255,255,255,0.70)',
+        '--glass-text-tertiary': 'rgba(255,255,255,0.45)',
+      } : {
+        '--glass-surface':       'rgba(255,255,255,0.90)',
+        '--glass-surface-thin':  'rgba(255,255,255,0.72)',
+        '--glass-border':        'rgba(0,0,0,0.08)',
+        '--glass-border-top':    'rgba(255,255,255,0.95)',
+        '--glass-shadow':        'rgba(0,0,0,0.08)',
+        '--glass-shadow-deep':   'rgba(0,0,0,0.18)',
+        '--glass-shimmer':       'rgba(255,255,255,0.22)',
+        '--glass-tint-a':        'rgba(99,102,241,0.05)',
+        '--glass-tint-b':        'rgba(244,114,182,0.03)',
+        '--glass-text-primary':  'rgba(15,23,42,0.90)',
+        '--glass-text-secondary':'rgba(15,23,42,0.60)',
+        '--glass-text-tertiary': 'rgba(15,23,42,0.40)',
+      };
+      for (const [k, v] of Object.entries(t)) app.style.setProperty(k, v);
+    };
+    watchEffect(() => applyThemeTokens(isDark.value));
 
     const bgClass = computed(() => ({
       sleep: 'bg-sleep',
@@ -1549,6 +1554,16 @@ createApp({
     onMounted(() => {
       loadData();
       if (!originTz.value) detectOriginTz();
+
+      // MutationObserver fallback: ensures tokens update when class changes directly
+      // (e.g. Cypress tests, or any external class manipulation that bypasses Vue reactivity)
+      const appEl = document.getElementById('app');
+      if (appEl) {
+        const obs = new MutationObserver(() => {
+          applyThemeTokens(appEl.classList.contains('theme-night'));
+        });
+        obs.observe(appEl, { attributes: true, attributeFilter: ['class'] });
+      }
 
       // Start ticker
       ticker = setInterval(() => {
