@@ -33,9 +33,10 @@
       --lg-ease-in: cubic-bezier(0.4,0.0,1.0,1.0);
     }
     /* Light mode tokens — `:root` 設 light 預設值，.theme-dark 覆蓋深色，不依賴 media query */
+    /* color-scheme 不放在 :root, .theme-light 合併規則裡，否則 :root 會蓋過第 17 行的 light 設定 */
+    .theme-light { color-scheme: only light; }
     :root,
     .theme-light {
-      color-scheme: only light;
       --lg-surface: rgba(255,255,255,0.78);
       --lg-surface-thin: rgba(255,255,255,0.55);
       --lg-surface-thick: rgba(255,255,255,0.95);
