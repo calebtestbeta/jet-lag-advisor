@@ -23,82 +23,97 @@
     }
     @media (prefers-color-scheme: dark) { body { background: #0f172a; } }
 
-    /* ── Liquid Glass Design Tokens ─────────────────────────────────────────── */
+    /* ── Glass Design Tokens ────────────────────────────────────────────────── */
+    /* 主題由 .theme-day / .theme-night 完整獨立控制，不依賴 prefers-color-scheme */
     :root {
-      --lg-blur-sm: 10px; --lg-blur-md: 20px; --lg-blur-lg: 32px;
-      --lg-radius-sm: 12px; --lg-radius-md: 20px; --lg-radius-lg: 28px; --lg-radius-pill: 9999px;
-      --lg-duration-fast: 150ms; --lg-duration-base: 280ms; --lg-duration-slow: 400ms;
-      --lg-ease-spring: cubic-bezier(0.34,1.56,0.64,1);
-      --lg-ease-out: cubic-bezier(0.0,0.0,0.2,1);
-      --lg-ease-in: cubic-bezier(0.4,0.0,1.0,1.0);
+      --glass-radius-sm: 12px; --glass-radius-md: 20px; --glass-radius-lg: 28px; --glass-radius-pill: 9999px;
+      --glass-duration-fast: 150ms; --glass-duration-base: 280ms; --glass-duration-slow: 400ms;
+      --glass-ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+      --glass-ease-out: cubic-bezier(0.0,0.0,0.2,1);
+      --glass-ease-in: cubic-bezier(0.4,0.0,1.0,1.0);
+      /* 日間預設值（無主題 class 時的 fallback） */
+      --glass-surface: rgba(255,255,255,0.90);
+      --glass-surface-thin: rgba(255,255,255,0.70);
+      --glass-surface-thick: rgba(255,255,255,0.97);
+      --glass-border: rgba(0,0,0,0.08);
+      --glass-border-top: rgba(255,255,255,0.95);
+      --glass-shadow: rgba(0,0,0,0.08);
+      --glass-shadow-deep: rgba(0,0,0,0.18);
+      --glass-text-primary: rgba(0,0,0,0.88);
+      --glass-text-secondary: rgba(0,0,0,0.55);
+      --glass-text-tertiary: rgba(0,0,0,0.38);
+      --glass-shimmer: rgba(255,255,255,0.22);
+      --glass-tint-a: rgba(99,102,241,0.05);
+      --glass-tint-b: rgba(244,114,182,0.03);
     }
-    /* Light mode tokens — `:root` 設 light 預設值，.theme-dark 覆蓋深色，不依賴 media query */
-    /* color-scheme 不放在 :root, .theme-light 合併規則裡，否則 :root 會蓋過第 17 行的 light 設定 */
-    .theme-light { color-scheme: only light; }
-    :root,
-    .theme-light {
-      --lg-surface: rgba(255,255,255,0.78);
-      --lg-surface-thin: rgba(255,255,255,0.55);
-      --lg-surface-thick: rgba(255,255,255,0.95);
-      --lg-border-top: rgba(255,255,255,0.90);
-      --lg-border-side: rgba(0,0,0,0.08);
-      --lg-shadow: rgba(0,0,0,0.08);
-      --lg-shadow-deep: rgba(0,0,0,0.14);
-      --lg-text-primary: rgba(0,0,0,0.85);
-      --lg-text-secondary: rgba(0,0,0,0.55);
-      --lg-text-tertiary: rgba(0,0,0,0.38);
+    /* 日間模式：目的地為白天（awake / dawn） */
+    .theme-day {
+      color-scheme: light;
+      --glass-surface: rgba(255,255,255,0.90);
+      --glass-surface-thin: rgba(255,255,255,0.70);
+      --glass-surface-thick: rgba(255,255,255,0.97);
+      --glass-border: rgba(0,0,0,0.08);
+      --glass-border-top: rgba(255,255,255,0.95);
+      --glass-shadow: rgba(0,0,0,0.08);
+      --glass-shadow-deep: rgba(0,0,0,0.18);
+      --glass-text-primary: rgba(0,0,0,0.88);
+      --glass-text-secondary: rgba(0,0,0,0.55);
+      --glass-text-tertiary: rgba(0,0,0,0.38);
+      --glass-shimmer: rgba(255,255,255,0.22);
+      --glass-tint-a: rgba(99,102,241,0.05);
+      --glass-tint-b: rgba(244,114,182,0.03);
     }
-    /* Dark mode tokens — 唯一深色 token 來源，由 .theme-dark class 控制 */
-    .theme-dark {
+    /* 夜間模式：目的地為夜晚（sleep / dusk） */
+    .theme-night {
       color-scheme: dark;
-      --lg-surface: rgba(30,30,40,0.60);
-      --lg-surface-thin: rgba(20,20,30,0.45);
-      --lg-surface-thick: rgba(20,20,32,0.88);
-      --lg-border-top: rgba(255,255,255,0.20);
-      --lg-border-side: rgba(255,255,255,0.12);
-      --lg-shadow: rgba(0,0,0,0.32);
-      --lg-shadow-deep: rgba(0,0,0,0.55);
-      --lg-text-primary: rgba(255,255,255,0.92);
-      --lg-text-secondary: rgba(255,255,255,0.62);
-      --lg-text-tertiary: rgba(255,255,255,0.40);
+      --glass-surface: rgba(22,24,38,0.85);
+      --glass-surface-thin: rgba(18,20,32,0.65);
+      --glass-surface-thick: rgba(16,18,28,0.95);
+      --glass-border: rgba(255,255,255,0.12);
+      --glass-border-top: rgba(255,255,255,0.20);
+      --glass-shadow: rgba(0,0,0,0.40);
+      --glass-shadow-deep: rgba(0,0,0,0.65);
+      --glass-text-primary: rgba(255,255,255,0.92);
+      --glass-text-secondary: rgba(255,255,255,0.62);
+      --glass-text-tertiary: rgba(255,255,255,0.38);
+      --glass-shimmer: rgba(255,255,255,0.16);
+      --glass-tint-a: rgba(139,92,246,0.12);
+      --glass-tint-b: rgba(216,180,254,0.06);
     }
 
-    /* ── Four-Layer Glass Material ───────────────────────────────────────────── */
-    /* backdrop-filter 已全面移除：Safari GPU compositing layer 快取問題無法可靠修復 */
+    /* ── Four-Layer Liquid Glass（無 backdrop-filter）────────────────────────── */
     .lg-glass {
       position: relative;
-      background: var(--lg-surface);
-      border: 1px solid var(--lg-border-side);
-      box-shadow: 0 8px 32px var(--lg-shadow);
-      transition: transform var(--lg-duration-base) ease-in-out, box-shadow var(--lg-duration-base) ease-in-out, background 0.8s ease, border-color 0.8s ease;
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 8px 32px var(--glass-shadow);
+      transition: transform var(--glass-duration-base) ease-in-out,
+                  box-shadow var(--glass-duration-base) ease-in-out,
+                  background 0.8s ease, border-color 0.8s ease;
     }
-    .theme-light .lg-glass {
-      background: rgba(255,255,255,0.93);
-      border-color: rgba(0,0,0,0.07);
-    }
-    .theme-dark .lg-glass {
-      background: rgba(30,30,40,0.88);
-      border-color: rgba(255,255,255,0.12);
-    }
+    /* Layer 2: 頂部高光反射 */
     .lg-glass::before {
       content: '';
       position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-      box-shadow: inset 0 1px 0 var(--lg-border-top), inset 0 -1px 0 rgba(0,0,0,0.04),
-                  inset 1px 0 0 rgba(255,255,255,0.10), inset -1px 0 0 rgba(255,255,255,0.10);
-      background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 40%);
+      box-shadow: inset 0 1px 0 var(--glass-border-top),
+                  inset 0 -1px 0 rgba(0,0,0,0.04),
+                  inset 1px 0 0 rgba(255,255,255,0.08),
+                  inset -1px 0 0 rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, var(--glass-shimmer) 0%, transparent 40%);
       z-index: 1;
     }
+    /* Layer 3: 彩色散射漸層（日/夜各自 token） */
     .lg-glass::after {
       content: '';
       position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-      background: linear-gradient(135deg, rgba(180,200,255,0.08) 0%, rgba(255,255,255,0) 50%, rgba(255,180,160,0.05) 100%);
+      background: linear-gradient(135deg, var(--glass-tint-a) 0%, transparent 50%, var(--glass-tint-b) 100%);
       z-index: 1;
     }
     .lg-glass > * { position: relative; z-index: 2; }
     .lg-glass-sm { }
     .lg-glass-lg { }
     @media (hover: hover) {
-      .lg-glass:hover { transform: translateY(-2px); box-shadow: 0 12px 40px var(--lg-shadow-deep); }
+      .lg-glass:hover { transform: translateY(-2px); box-shadow: 0 12px 40px var(--glass-shadow-deep); }
     }
 
     /* ── Button System ───────────────────────────────────────────────────────── */
@@ -106,70 +121,69 @@
       position: relative; isolation: isolate; overflow: hidden;
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
       cursor: pointer; border: none; font-family: inherit; font-size: 0.875rem; font-weight: 500;
-      transition: transform var(--lg-duration-fast) var(--lg-ease-spring),
-                  box-shadow var(--lg-duration-fast) ease-in-out,
-                  background var(--lg-duration-base) ease-in-out;
+      transition: transform var(--glass-duration-fast) var(--glass-ease-spring),
+                  box-shadow var(--glass-duration-fast) ease-in-out,
+                  background var(--glass-duration-base) ease-in-out;
     }
     .lg-btn:hover:not(:disabled) { transform: translateY(-1px) scale(1.01); }
     .lg-btn:active:not(:disabled) { transform: scale(0.97) !important; }
     .lg-btn:disabled { opacity: 0.38; cursor: not-allowed; }
     .lg-btn:focus-visible { outline: 2px solid rgba(0,102,255,0.80); outline-offset: 2px; }
     .lg-btn-primary {
-      border-radius: var(--lg-radius-pill); padding: 12px 24px;
+      border-radius: var(--glass-radius-pill); padding: 12px 24px;
       background: rgba(99,102,241,0.90);
       color: white;
       box-shadow: 0 4px 16px rgba(99,102,241,0.35), inset 0 1px 0 rgba(255,255,255,0.35);
     }
     .lg-btn-primary:hover:not(:disabled) { background: rgba(99,102,241,0.95); }
     .lg-btn-secondary {
-      border-radius: var(--lg-radius-md); padding: 12px 20px;
-      background: var(--lg-surface);
-      color: var(--lg-text-primary);
-      box-shadow: 0 2px 8px var(--lg-shadow), inset 0 1px 0 var(--lg-border-top);
-      border: 1px solid var(--lg-border-side);
+      border-radius: var(--glass-radius-md); padding: 12px 20px;
+      background: var(--glass-surface);
+      color: var(--glass-text-primary);
+      box-shadow: 0 2px 8px var(--glass-shadow), inset 0 1px 0 var(--glass-border-top);
+      border: 1px solid var(--glass-border);
     }
     .lg-btn-ghost {
-      border-radius: var(--lg-radius-md); padding: 10px 20px;
-      background: rgba(255,255,255,0.08); color: var(--lg-text-secondary);
+      border-radius: var(--glass-radius-md); padding: 10px 20px;
+      background: rgba(255,255,255,0.08); color: var(--glass-text-secondary);
       border: 1px solid rgba(255,255,255,0.12);
     }
-    .theme-light .lg-btn-ghost {
+    .theme-day .lg-btn-ghost {
       background: rgba(0,0,0,0.05); color: rgba(0,0,0,0.55);
       border-color: rgba(0,0,0,0.10);
     }
-    .theme-light .lg-btn-ghost:hover:not(:disabled) { background: rgba(0,0,0,0.09); }
+    .theme-day .lg-btn-ghost:hover:not(:disabled) { background: rgba(0,0,0,0.09); }
     .lg-btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.15); }
 
     /* ── Glass Input ─────────────────────────────────────────────────────────── */
     .lg-input {
-      border: 1px solid var(--lg-border-side);
-      border-radius: var(--lg-radius-md);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--glass-radius-md);
       padding: 12px 40px 12px 16px;
       font-size: 0.875rem;
       outline: none; width: 100%; caret-color: #007AFF;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
-      transition: border-color var(--lg-duration-fast), box-shadow var(--lg-duration-fast);
+      transition: border-color var(--glass-duration-fast), box-shadow var(--glass-duration-fast);
       font-family: inherit;
     }
-    /* 明確主題色避免 backdrop-filter 疊加導致輸入框過暗 */
-    .theme-light .lg-input {
-      background: rgba(255,255,255,0.92);
+    .theme-day .lg-input {
+      background: rgba(255,255,255,0.95);
       color: rgba(0,0,0,0.85);
       border-color: rgba(0,0,0,0.10);
     }
-    .theme-light .lg-input::placeholder { color: rgba(0,0,0,0.35); }
-    .theme-dark .lg-input {
-      background: rgba(40,42,58,0.85);
+    .theme-day .lg-input::placeholder { color: rgba(0,0,0,0.35); }
+    .theme-night .lg-input {
+      background: rgba(30,32,48,0.88);
       color: rgba(255,255,255,0.92);
       border-color: rgba(255,255,255,0.14);
       color-scheme: dark;
     }
-    .theme-dark .lg-input::placeholder { color: rgba(255,255,255,0.38); }
+    .theme-night .lg-input::placeholder { color: rgba(255,255,255,0.38); }
     .lg-input:focus {
       border-color: rgba(0,122,255,0.60);
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.06), 0 0 0 3px rgba(0,122,255,0.20);
     }
-    .lg-input::placeholder { color: var(--lg-text-tertiary); }
+    .lg-input::placeholder { color: var(--glass-text-tertiary); }
 
     /* ── Overlay & Bottom Sheet ──────────────────────────────────────────────── */
     .lg-overlay {
@@ -180,11 +194,11 @@
       position: absolute; bottom: 0; left: 0; right: 0;
       max-width: 28rem; margin: 0 auto;
       border-radius: 28px 28px 0 0;
-      background: var(--lg-surface);
-      box-shadow: 0 -8px 40px var(--lg-shadow-deep),
-                  inset 0 1px 0 var(--lg-border-top),
-                  inset 1px 0 0 var(--lg-border-side),
-                  inset -1px 0 0 var(--lg-border-side);
+      background: var(--glass-surface);
+      box-shadow: 0 -8px 40px var(--glass-shadow-deep),
+                  inset 0 1px 0 var(--glass-border-top),
+                  inset 1px 0 0 var(--glass-border),
+                  inset -1px 0 0 var(--glass-border);
       padding: 24px; max-height: 85vh; overflow-y: auto;
     }
     .lg-sheet-handle {
@@ -196,11 +210,11 @@
     /* ── Status Pill ─────────────────────────────────────────────────────────── */
     .lg-pill {
       display: inline-flex; align-items: center; gap: 4px;
-      padding: 4px 10px; border-radius: var(--lg-radius-pill);
+      padding: 4px 10px; border-radius: var(--glass-radius-pill);
       font-size: 0.75rem; font-weight: 500;
-      background: var(--lg-surface); border: 1px solid var(--lg-border-side);
+      background: var(--glass-surface); border: 1px solid var(--glass-border);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.60);
-      color: var(--lg-text-primary);
+      color: var(--glass-text-primary);
     }
     .lg-pill.success { background: rgba(52,199,89,0.18); border-color: rgba(52,199,89,0.35); color: rgb(52,199,89); }
     .lg-pill.warning { background: rgba(255,159,10,0.18); border-color: rgba(255,159,10,0.35); color: rgb(255,159,10); }
@@ -213,10 +227,10 @@
       width: 44px; height: 44px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; border: none;
-      background: var(--lg-surface);
-      border: 1px solid var(--lg-border-side);
-      box-shadow: inset 0 1px 0 var(--lg-border-top);
-      transition: transform var(--lg-duration-fast) var(--lg-ease-spring);
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      box-shadow: inset 0 1px 0 var(--glass-border-top);
+      transition: transform var(--glass-duration-fast) var(--glass-ease-spring);
       color: inherit; position: relative;
     }
     .lg-icon-btn::before {
@@ -242,7 +256,7 @@
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 2px; }
-    .theme-dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); }
+    .theme-night ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); }
     input[type="text"], input[type="time"], input[type="datetime-local"] {
       appearance: none; -webkit-appearance: none;
     }
@@ -250,8 +264,8 @@
     input[type="datetime-local"]::-webkit-calendar-picker-indicator {
       filter: invert(1); opacity: 0.5;
     }
-    .theme-light input[type="time"]::-webkit-calendar-picker-indicator,
-    .theme-light input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    .theme-day input[type="time"]::-webkit-calendar-picker-indicator,
+    .theme-day input[type="datetime-local"]::-webkit-calendar-picker-indicator {
       filter: none; opacity: 0.45;
     }
 
@@ -293,11 +307,11 @@
     .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px); }
 
     /* ── Sheet Transitions ───────────────────────────────────────────────────── */
-    .sheet-enter-active { transition: opacity var(--lg-duration-base) ease; }
+    .sheet-enter-active { transition: opacity var(--glass-duration-base) ease; }
     .sheet-leave-active { transition: opacity 0.2s ease; }
     .sheet-enter-from, .sheet-leave-to { opacity: 0; }
-    .sheet-enter-active .lg-sheet { transition: transform var(--lg-duration-slow) var(--lg-ease-out); }
-    .sheet-leave-active .lg-sheet { transition: transform 280ms var(--lg-ease-in); }
+    .sheet-enter-active .lg-sheet { transition: transform var(--glass-duration-slow) var(--glass-ease-out); }
+    .sheet-leave-active .lg-sheet { transition: transform 280ms var(--glass-ease-in); }
     .sheet-enter-from .lg-sheet, .sheet-leave-to .lg-sheet { transform: translateY(100%); }
 
     /* Fade transition */
@@ -307,8 +321,8 @@
 
     /* ── Accessibility ───────────────────────────────────────────────────────── */
     @media (prefers-reduced-transparency: reduce) {
-      .theme-dark .lg-glass, .theme-dark .lg-sheet, .theme-dark .lg-icon-btn { background: rgba(28,28,36,0.97) !important; }
-      .lg-glass, .lg-sheet, .lg-icon-btn { background: rgba(255,255,255,0.97) !important; }
+      .theme-night .lg-glass, .theme-night .lg-sheet, .theme-night .lg-icon-btn { background: rgba(16,18,28,0.97) !important; }
+      .theme-day .lg-glass, .theme-day .lg-sheet, .theme-day .lg-icon-btn { background: rgba(255,255,255,0.97) !important; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
@@ -329,7 +343,7 @@
     </filter>
   </defs>
 </svg>
-<div id="app" :class="['min-h-screen', bgClass, isDark ? 'theme-dark text-white' : 'theme-light text-slate-800']" style="transition: background 1s ease, color 1s ease;">
+<div id="app" :class="['min-h-screen', bgClass, isDark ? 'theme-night text-white' : 'theme-day text-slate-800']" style="transition: background 1s ease, color 1s ease;">
 
   <!-- Update banner -->
   <div v-if="showUpdateBanner" class="fixed top-0 left-0 right-0 z-50 safe-top">

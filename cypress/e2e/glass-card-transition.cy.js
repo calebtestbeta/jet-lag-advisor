@@ -1,29 +1,25 @@
 // Glass Card Theme Transition Tests
 //
-// 測試目標：驗證切換 theme-light / theme-dark 時，.lg-glass 卡片背景確實更新
-// 背景：修復前 #app 使用 transition-all，Safari GPU 合成層導致卡片視覺停留在舊狀態
+// 測試目標：驗證切換 theme-day / theme-night 時，.lg-glass 卡片背景確實更新
+// 設計：backdrop-filter 已全面移除，主題由 .theme-day / .theme-night class 控制
+// 唯一依據：目的地當地時間（非系統 prefers-color-scheme）
 //
 // 執行前提：本機需先啟動 server → npm run serve（或 python3 -m http.server 8080）
 
-const LIGHT_BG_PATTERN = /rgba\(255,\s*255,\s*255/
-const DARK_BG_PATTERN = /rgba\(3[0-9],\s*3[0-9],\s*[3-5][0-9]/
 const TRANSITION_SETTLE_MS = 1100  // 0.8s transition + 300ms buffer
 
 // 解析 RGB(A) 字串的 R 通道數值
 const parseR = (bg) => parseInt(bg.match(/rgba?\((\d+)/)?.[1] ?? '128')
 
 describe('Glass Card - CSS Architecture', () => {
-  // 每個 it 各自 visit，避免 before() 狀態在 headless 模式下遺失
   const setup = () => {
     cy.visit('/')
     cy.get('#app').should('exist')
-    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-light text-slate-800')
+    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-day text-slate-800')
   }
 
   it('#app inline style 使用明確 background/color 過渡，而非 transition-all', () => {
     setup()
-    // 修復前：Tailwind class "transition-all duration-1000" 在 #app 上
-    // 修復後：改用 inline style "transition: background 1s ease, color 1s ease;"
     cy.get('#app').invoke('attr', 'style').then(style => {
       cy.log('inline style:', style)
       expect(style, 'style 應包含 transition').to.include('transition')
@@ -37,7 +33,6 @@ describe('Glass Card - CSS Architecture', () => {
     cy.get('#app').then($el => {
       const transitionProp = window.getComputedStyle($el[0]).transitionProperty
       cy.log('transitionProperty:', transitionProp)
-      // transition-all 展開後 transitionProperty = "all"
       expect(transitionProp.trim()).not.to.equal('all')
     })
   })
@@ -67,7 +62,6 @@ describe('Glass Card - CSS Architecture', () => {
       ).to.be.true
     })
   })
-
 })
 
 describe('Glass Card - Background Color Transition', () => {
@@ -76,67 +70,63 @@ describe('Glass Card - Background Color Transition', () => {
     cy.get('#app').should('exist')
   })
 
-  it('從 theme-light 切換到 theme-dark 後，背景應變為深色', () => {
-    // 先確保 light 狀態穩定
-    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-light text-slate-800')
+  it('從 theme-day 切換到 theme-night 後，背景應變為深色（R < 60）', () => {
+    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-day text-slate-800')
     cy.wait(TRANSITION_SETTLE_MS)
 
     cy.get('.lg-glass').first().then($el => {
-      const lightBg = window.getComputedStyle($el[0]).backgroundColor
-      cy.log('light mode bg:', lightBg)
-      expect(parseR(lightBg), 'light mode R channel 應 > 200').to.be.greaterThan(200)
+      const dayBg = window.getComputedStyle($el[0]).backgroundColor
+      cy.log('day mode bg:', dayBg)
+      expect(parseR(dayBg), 'day mode R channel 應 > 200').to.be.greaterThan(200)
     })
 
-    // 切換到 dark
-    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-dark text-white')
+    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-night text-white')
     cy.wait(TRANSITION_SETTLE_MS)
 
     cy.get('.lg-glass').first().then($el => {
-      const darkBg = window.getComputedStyle($el[0]).backgroundColor
-      cy.log('dark mode bg:', darkBg)
-      expect(parseR(darkBg), 'dark mode R channel 應 < 80').to.be.lessThan(80)
+      const nightBg = window.getComputedStyle($el[0]).backgroundColor
+      cy.log('night mode bg:', nightBg)
+      expect(parseR(nightBg), 'night mode R channel 應 < 60').to.be.lessThan(60)
     })
   })
 
-  it('從 theme-dark 切換到 theme-light 後，背景應回到白色', () => {
-    // 先確保 dark 狀態穩定
-    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-dark text-white')
+  it('從 theme-night 切換到 theme-day 後，背景應回到白色（R > 200）', () => {
+    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-night text-white')
     cy.wait(TRANSITION_SETTLE_MS)
 
     cy.get('.lg-glass').first().then($el => {
-      const darkBg = window.getComputedStyle($el[0]).backgroundColor
-      cy.log('dark mode bg:', darkBg)
-      expect(parseR(darkBg), 'dark mode R channel 應 < 80').to.be.lessThan(80)
+      const nightBg = window.getComputedStyle($el[0]).backgroundColor
+      cy.log('night mode bg:', nightBg)
+      expect(parseR(nightBg), 'night mode R channel 應 < 60').to.be.lessThan(60)
     })
 
-    // 切換回 light
-    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-light text-slate-800')
+    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-day text-slate-800')
     cy.wait(TRANSITION_SETTLE_MS)
 
     cy.get('.lg-glass').first().then($el => {
-      const lightBg = window.getComputedStyle($el[0]).backgroundColor
-      cy.log('back to light mode bg:', lightBg)
-      expect(parseR(lightBg), 'light mode R channel 應 > 200').to.be.greaterThan(200)
+      const dayBg = window.getComputedStyle($el[0]).backgroundColor
+      cy.log('back to day mode bg:', dayBg)
+      expect(parseR(dayBg), 'day mode R channel 應 > 200').to.be.greaterThan(200)
     })
   })
 
-  it('連續來回切換三次後，最終狀態應正確', () => {
+  it('連續來回切換三次後，最終夜間狀態應正確（R < 60）', () => {
     const FAST_SETTLE = 900
 
-    const setLight = () => cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-light text-slate-800')
-    const setDark  = () => cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-dark text-white')
+    const setDay   = () => cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-day text-slate-800')
+    const setNight = () => cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-night text-white')
 
-    setLight(); cy.wait(FAST_SETTLE)
-    setDark();  cy.wait(FAST_SETTLE)
-    setLight(); cy.wait(FAST_SETTLE)
-    setDark();  cy.wait(FAST_SETTLE)
-    setLight(); cy.wait(FAST_SETTLE)
-    setDark();  cy.wait(FAST_SETTLE)
+    setDay();   cy.wait(FAST_SETTLE)
+    setNight(); cy.wait(FAST_SETTLE)
+    setDay();   cy.wait(FAST_SETTLE)
+    setNight(); cy.wait(FAST_SETTLE)
+    setDay();   cy.wait(FAST_SETTLE)
+    setNight(); cy.wait(FAST_SETTLE)
 
     cy.get('.lg-glass').first().then($el => {
       const finalBg = window.getComputedStyle($el[0]).backgroundColor
-      cy.log('final dark bg:', finalBg)
-      expect(parseR(finalBg), '最終 dark mode R channel 應 < 80').to.be.lessThan(80)
+      cy.log('final night bg:', finalBg)
+      expect(parseR(finalBg), '最終 night mode R channel 應 < 60').to.be.lessThan(60)
     })
   })
 })
@@ -147,11 +137,11 @@ describe('Glass Card - All Cards Updated', () => {
     cy.get('#app').should('exist')
   })
 
-  it('切換主題後，所有 .lg-glass 元素都應更新背景', () => {
-    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-light text-slate-800')
+  it('切換到 theme-night 後，所有 .lg-glass 元素都應更新為深色背景', () => {
+    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-day text-slate-800')
     cy.wait(TRANSITION_SETTLE_MS)
 
-    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-dark text-white')
+    cy.get('#app').invoke('attr', 'class', 'min-h-screen theme-night text-white')
     cy.wait(TRANSITION_SETTLE_MS)
 
     cy.get('.lg-glass').then($cards => {
@@ -161,7 +151,7 @@ describe('Glass Card - All Cards Updated', () => {
       $cards.each((i, el) => {
         const bg = window.getComputedStyle(el).backgroundColor
         const r = parseR(bg)
-        expect(r, `卡片 #${i} R channel 應 < 80，實際: ${bg}`).to.be.lessThan(80)
+        expect(r, `卡片 #${i} R channel 應 < 60，實際: ${bg}`).to.be.lessThan(60)
       })
     })
   })
