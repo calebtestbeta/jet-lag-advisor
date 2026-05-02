@@ -964,10 +964,16 @@ const { createApp, ref, computed, onMounted, onUnmounted, watch, nextTick } = Vu
 createApp({
   setup() {
     // ── State ───────────────────────────────────────────────────────────────
-    const originTz = ref('');
-    const destTz   = ref('');
-    const originSearch = ref('');
-    const destSearch   = ref('');
+    // 同步預載 localStorage，確保第一次渲染就有正確的 destTz，
+    // 避免 isDark 從 false 閃一次 light mode 後才切 dark mode（Safari GPU 合成層快取問題）
+    const _pre = (() => {
+      try { const s = localStorage.getItem('jl_settings'); return s ? JSON.parse(s) : {}; } catch { return {}; }
+    })();
+
+    const originTz = ref(_pre.originTz || '');
+    const destTz   = ref(_pre.destTz   || '');
+    const originSearch = ref(_pre.originSearch || '');
+    const destSearch   = ref(_pre.destSearch   || '');
     const originResults = ref([]);
     const destResults   = ref([]);
     const showOriginDrop = ref(false);
@@ -978,7 +984,7 @@ createApp({
     const destList   = ref(null);
 
     const now = ref(new Date());
-    const settings = ref({ wakeTime: '07:00', sleepTime: '22:00' });
+    const settings = ref({ ...{ wakeTime: '07:00', sleepTime: '22:00' }, ...(_pre.settings || {}) });
 
     // Trip
     const tripDepartStr  = ref('');
